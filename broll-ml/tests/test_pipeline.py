@@ -3,14 +3,21 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import patch
 from zipfile import ZipFile
 
-from app import extract_video_zip
+from app import extract_video_zip, validate_videos
 from ml.indexing import index_video
-from ml.evaluation import calibrate_threshold, evaluate_query
+from ml.evaluation import (
+    calibrate_threshold,
+    evaluate_configurations,
+    evaluate_query,
+)
 from ml.ranking import rank_results
 from ml.script_processor import search_script
 from ml.segment_builder import build_segments
+from ml.reranking import frame_level_rerank
+from ml.search import validate_query
 
 
 class PipelineTests(TestCase):
@@ -55,6 +62,31 @@ class PipelineTests(TestCase):
             self.assertEqual(paths[0].suffix, ".mp4")
             self.assertTrue(paths[0].is_relative_to(Path(directory).resolve()))
 
+    def test_zip_rejects_unsafe_paths(self):
+        archive = BytesIO()
+        with ZipFile(archive, "w") as zip_file:
+            zip_file.writestr("../escape.mp4", b"video")
+        archive.seek(0)
+
+        with TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                extract_video_zip(archive, directory)
+
+    def test_validation_skips_long_and_corrupt_videos(self):
+        paths = [Path("short.mp4"), Path("long.mp4"), Path("broken.mp4")]
+
+        def extract(path, max_frames=1):
+            if path.name == "short.mp4":
+                return {"frames": [object()], "duration": 10.0}
+            if path.name == "long.mp4":
+                return {"frames": [object()], "duration": 61.0}
+            raise OSError("corrupt")
+
+        with patch("ml.video_processor.extract_video_frames", side_effect=extract):
+            valid, skipped = validate_videos(paths)
+        self.assertEqual(valid, [paths[0]])
+        self.assertEqual(skipped, paths[1:])
+
     def test_unreadable_video_is_skipped(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "broken.mp4"
@@ -83,6 +115,14 @@ class PipelineTests(TestCase):
         )
         self.assertEqual(len(result["scenes"]), 2)
         self.assertEqual(len(calls), 2)
+
+    def test_text_input_is_limited_to_500_words(self):
+        with self.assertRaises(ValueError):
+            validate_query("word " * 501)
+
+    def test_script_input_is_limited_to_500_words(self):
+        with self.assertRaises(ValueError):
+            search_script("word " * 501, lambda sentence: [])
 
     def test_evaluation_uses_video_id_and_temporal_overlap(self):
         def search(query, top_k=5, threshold=0.0):
@@ -125,6 +165,59 @@ class PipelineTests(TestCase):
             calibrate_threshold(rows, search, thresholds=[0.0, 0.75])["threshold"],
             0.0,
         )
+
+    def test_frame_reranking_prefers_best_frame(self):
+        results = frame_level_rerank(
+            [
+                {
+                    "video_path": "one.mp4",
+                    "start_time": 0.0,
+                    "end_time": 2.0,
+                    "similarity": 0.4,
+                },
+                {
+                    "video_path": "two.mp4",
+                    "start_time": 0.0,
+                    "end_time": 2.0,
+                    "similarity": 0.5,
+                },
+            ],
+            [1.0, 0.0],
+            {
+                "one.mp4": [(1.0, [1.0, 0.0])],
+                "two.mp4": [(1.0, [0.0, 1.0])],
+            },
+            weight=0.5,
+        )
+        self.assertEqual(results[0]["video_path"], "one.mp4")
+
+    def test_configuration_evaluation_rebuilds_each_configuration(self):
+        built = []
+        rows = [{
+            "query": "person walking",
+            "video_id": "video_001",
+            "start_time": "0",
+            "end_time": "2",
+        }]
+
+        def build_index(**configuration):
+            built.append(configuration)
+
+        def search(query, top_k=5, threshold=0.0):
+            return [{
+                "video_id": "video_001",
+                "start_time": 0.0,
+                "end_time": 2.0,
+            }]
+
+        reports = evaluate_configurations(
+            rows,
+            build_index,
+            search,
+            [{"frame_interval": 1.0}, {"frame_interval": 2.0}],
+        )
+        self.assertEqual(len(reports), 2)
+        self.assertEqual(built[1]["frame_interval"], 2.0)
 
 
 if __name__ == "__main__":

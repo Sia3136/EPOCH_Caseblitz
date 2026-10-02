@@ -48,7 +48,7 @@ def main():
         print(
             f"{rank}. {result['filename']} | "
             f"{result['start_time']:.1f}s - {result['end_time']:.1f}s | "
-            f"similarity {result['similarity']:.4f}"
+            f"confidence {result['confidence_score']}%"
         )
 
 

@@ -1,4 +1,5 @@
 
+import json
 import sqlite3
 from threading import RLock
 from pathlib import Path
@@ -41,6 +42,10 @@ def _ensure_schema(conn):
             "substr(filename, 1, instr(filename, '.') - 1) "
             "WHERE video_id IS NULL"
         )
+    if "quality_score" not in columns:
+        conn.execute("ALTER TABLE segments ADD COLUMN quality_score REAL")
+    if "quality_issues" not in columns:
+        conn.execute("ALTER TABLE segments ADD COLUMN quality_issues TEXT")
 
 
 def save_library(all_segments):
@@ -69,9 +74,9 @@ def save_library(all_segments):
                     INSERT INTO segments (
                         segment_id, video_id, filename, video_path,
                         duration, start_time, end_time,
-                        thumbnail_path, faiss_id
+                        thumbnail_path, quality_score, quality_issues, faiss_id
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     f"segment_{faiss_id}",
                     segment.get("video_id", video_path.stem),
@@ -81,6 +86,8 @@ def save_library(all_segments):
                     segment["start"],
                     segment["end"],
                     segment.get("thumbnail_path"),
+                    segment.get("quality_score"),
+                    json.dumps(segment.get("quality_issues", [])),
                     faiss_id
                 ))
 
@@ -99,19 +106,44 @@ def load_index():
 
 def get_segment_metadata(faiss_id):
     with sqlite3.connect(DB_PATH) as conn:
+        _ensure_schema(conn)
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT * FROM segments WHERE faiss_id = ?",
             (int(faiss_id),)
         ).fetchone()
 
-    return dict(row) if row else None
+    return _decode_metadata(row) if row else None
 
 
 def get_all_segment_metadata():
     with sqlite3.connect(DB_PATH) as conn:
+        _ensure_schema(conn)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             "SELECT * FROM segments ORDER BY faiss_id"
         ).fetchall()
-    return [dict(row) for row in rows]
+    return [_decode_metadata(row) for row in rows]
+
+
+def _decode_metadata(row):
+    metadata = dict(row)
+    try:
+        metadata["quality_issues"] = json.loads(metadata.get("quality_issues") or "[]")
+    except json.JSONDecodeError:
+        metadata["quality_issues"] = []
+    return metadata
+
+
+def validate_saved_library():
+    """Return basic FAISS/SQLite consistency information after reload."""
+    index = load_index()
+    rows = get_all_segment_metadata()
+    faiss_ids = [row["faiss_id"] for row in rows]
+    return {
+        "vectors": index.ntotal,
+        "metadata_rows": len(rows),
+        "ids_contiguous": sorted(faiss_ids) == list(range(index.ntotal)),
+        "consistent": index.ntotal == len(rows)
+        and sorted(faiss_ids) == list(range(index.ntotal)),
+    }

@@ -32,6 +32,8 @@ python main.py search "A person using a laptop" --threshold 0.20
 
 The same reusable functions are available from `ml.indexing` and `ml.search`. The index is rebuilt as a complete library and stored as FAISS vectors plus SQLite metadata under `data/index/`. Image embeddings are batched and cached per video, and thumbnail paths are stored with each segment.
 
+For optional frame-level reranking, call `search_videos(..., rerank_frames=True)` after indexing.
+
 ## Streamlit UI
 
 ```powershell
@@ -48,10 +50,28 @@ The UI accepts a ZIP up to 500 MB, extracts at most 50 supported videos, rejects
 python tools/evaluate_search.py data/evaluation_queries.csv
 ```
 
+Calibrate the threshold against the same labeled examples with:
+
+```powershell
+python tools/evaluate_search.py data/evaluation_queries.csv --calibrate
+```
+
+Compare sampling intervals, segment sizes, and optional overlap with:
+
+```powershell
+python tools/evaluate_configurations.py data/videos data/evaluation_queries.csv --overlap
+```
+
 The evaluator reports Recall@5, Precision@5, MRR, and temporal IoU. Benchmark decoding with:
 
 ```powershell
 python tools/benchmark_ingestion.py data/videos
+```
+
+Add average saved-index query latency with:
+
+```powershell
+python tools/benchmark_ingestion.py data/videos --query "a person walking" --runs 5
 ```
 
 When score distributions overlap, present low-confidence suggestions rather than claiming a definitive no-match.
@@ -66,9 +86,18 @@ Suggested evaluation queries:
 
 ## Architecture
 
-```text
-ZIP upload -> safe extraction -> OpenCV frame sampling -> CLIP embeddings
-           -> segment grouping -> FAISS search + SQLite metadata -> Streamlit results
+```mermaid
+flowchart LR
+    A[ZIP upload] --> B[Safe extraction and validation]
+    B --> C[OpenCV frame sampling]
+    C --> D[Cached batched CLIP embeddings]
+    D --> E[Timestamped segments]
+    E --> F[FAISS vectors]
+    E --> G[SQLite metadata]
+    F --> H[Natural-language search]
+    G --> H
+    H --> I[Optional frame or caption reranking]
+    I --> J[Thumbnail and timestamp preview]
 ```
 
 Known limitations: the current segmenter uses fixed-interval sampling, CLIP and optional captioning models are expensive to load, and the demo needs visually different source clips for meaningful quality evaluation.

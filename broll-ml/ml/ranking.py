@@ -40,6 +40,7 @@ def rank_results(results, threshold=35, max_results=5):
             continue
 
         result["match_percentage"] = percentage
+        result["confidence_score"] = percentage
         selected.append(result)
         clip_counts[clip_id] = count + 1
 

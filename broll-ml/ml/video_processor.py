@@ -6,6 +6,30 @@ import cv2
 
 
 SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
+MAX_VIDEO_DURATION = 60.0
+
+
+def assess_frame_quality(frame, blur_threshold=35.0):
+    """Return interpretable quality signals without modifying the source frame."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    brightness = float(gray.mean())
+    contrast = float(gray.std())
+    issues = []
+    if blur_score < blur_threshold:
+        issues.append("blurry")
+    if brightness < 35:
+        issues.append("too_dark")
+    elif brightness > 225:
+        issues.append("overexposed")
+    if contrast < 18:
+        issues.append("low_contrast")
+    return {
+        "blur_score": blur_score,
+        "brightness": brightness,
+        "contrast": contrast,
+        "issues": issues,
+    }
 
 
 def extract_video_frames(video_path, interval=2.0, max_frames=15):
@@ -19,8 +43,17 @@ def extract_video_frames(video_path, interval=2.0, max_frames=15):
     fps = capture.get(cv2.CAP_PROP_FPS)
     frame_count = capture.get(cv2.CAP_PROP_FRAME_COUNT)
     duration = frame_count / fps if fps > 0 else 0.0
+    if duration > MAX_VIDEO_DURATION:
+        capture.release()
+        return {
+            "frames": [],
+            "timestamps": [],
+            "duration": duration,
+            "error": "video_longer_than_60_seconds",
+        }
     frames = []
     timestamps = []
+    quality = []
     timestamp = 0.0
 
     try:
@@ -28,8 +61,10 @@ def extract_video_frames(video_path, interval=2.0, max_frames=15):
             capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
             success, frame = capture.read()
             if success:
-                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(rgb_frame)
                 timestamps.append(timestamp)
+                quality.append(assess_frame_quality(rgb_frame))
             timestamp += interval
     finally:
         capture.release()
@@ -38,6 +73,7 @@ def extract_video_frames(video_path, interval=2.0, max_frames=15):
         "frames": frames,
         "timestamps": timestamps,
         "duration": duration,
+        "quality": quality,
     }
 
 

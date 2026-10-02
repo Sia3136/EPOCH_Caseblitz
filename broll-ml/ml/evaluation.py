@@ -87,11 +87,6 @@ def calibrate_threshold(rows, search_function, thresholds=None, k=5):
     for threshold in candidates:
         metrics = []
         for row in rows:
-            def search(query, top_k=k, current_threshold=threshold):
-                return search_function(
-                    query, top_k=top_k, threshold=current_threshold
-                )
-
             metrics.append(
                 evaluate_query(
                     row["query"], row, search_function, k=k, threshold=threshold
@@ -101,3 +96,27 @@ def calibrate_threshold(rows, search_function, thresholds=None, k=5):
 
     recall, threshold = max(scored, key=lambda item: (item[0], -item[1]))
     return {"threshold": threshold, "recall_at_k": recall}
+
+
+def evaluate_configurations(rows, build_index, search_function, configurations, k=5):
+    """Evaluate labeled retrieval for multiple sampling/segment configurations."""
+    reports = []
+    for configuration in configurations:
+        build_index(**configuration)
+        metrics = [
+            evaluate_query(row["query"], row, search_function, k=k)
+            for row in rows
+        ]
+        count = len(metrics)
+        reports.append({
+            **configuration,
+            "count": count,
+            "recall_at_k": sum(item["recall_at_k"] for item in metrics) / count
+            if count else 0.0,
+            "precision_at_k": sum(item["precision_at_k"] for item in metrics) / count
+            if count else 0.0,
+            "mrr": sum(item["mrr"] for item in metrics) / count if count else 0.0,
+            "temporal_iou": sum(item["temporal_iou"] for item in metrics) / count
+            if count else 0.0,
+        })
+    return reports

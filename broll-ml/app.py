@@ -7,8 +7,10 @@ from zipfile import ZipFile
 from ml.indexing import index_video, unique_video_paths
 from ml.ranking import similarity_to_percentage
 from ml.search import search_videos
+from ml.search import MAX_QUERY_WORDS
 from ml.script_processor import search_script
 from ml.video_processor import SUPPORTED_VIDEO_EXTENSIONS
+from ml.video_processor import MAX_VIDEO_DURATION
 
 
 ROOT = Path(__file__).resolve().parent
@@ -75,7 +77,7 @@ def validate_videos(video_paths):
             result = extract_video_frames(path, max_frames=1)
         except (OSError, ValueError):
             result = {"frames": [], "duration": 0.0}
-        if result["frames"] and result["duration"] <= 60:
+        if result["frames"] and result["duration"] <= MAX_VIDEO_DURATION:
             valid.append(path)
         else:
             skipped.append(path)
@@ -92,10 +94,11 @@ def render_result(result, st):
         st.subheader(result["filename"])
         st.write(
             f"{result['start_time']:.1f}s - {result['end_time']:.1f}s  "
-            f"| similarity {result['similarity']:.4f}  "
-            f"| match {similarity_to_percentage(result['similarity'])}%"
+            f"| confidence {result['confidence_score']}%"
         )
         st.caption(result["explanation"])
+        if result.get("quality_issues"):
+            st.warning("Visual quality flag: " + ", ".join(result["quality_issues"]))
         st.video(result["video_path"], start_time=int(result["start_time"]))
 
 
@@ -152,6 +155,7 @@ def main():
             "Describe the footage you're looking for",
             placeholder="A person walking through a busy city",
         )
+        st.caption(f"Maximum input: {MAX_QUERY_WORDS} words")
         if st.button("Search", type="primary") and query.strip():
             results = search_videos(query, threshold=threshold)
             if results:
@@ -164,6 +168,7 @@ def main():
             "Paste your narration or script",
             placeholder="The city wakes up as people begin their morning commute.",
         )
+        st.caption(f"Maximum input: {MAX_QUERY_WORDS} words")
         if st.button("Search script", type="primary") and script.strip():
             scenes = search_script(
                 script,

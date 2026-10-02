@@ -27,6 +27,13 @@ def build_segments(
 
         average = embeddings.mean(axis=0)
         average /= np.linalg.norm(average) + 1e-12
+        quality = [item.get("quality", {}) for item in group]
+        issues = sorted({
+            issue
+            for item in quality
+            for issue in item.get("issues", [])
+        })
+        blur_scores = [item["blur_score"] for item in quality if "blur_score" in item]
 
         segments.append({
             "start_time": group[0]["timestamp"],
@@ -35,6 +42,10 @@ def build_segments(
                 duration if duration is not None else float("inf"),
             ),
             "embedding": average,
+            "quality_score": (
+                float(np.mean(blur_scores)) if blur_scores else None
+            ),
+            "quality_issues": issues,
         })
 
     return segments
