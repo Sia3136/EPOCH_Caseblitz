@@ -1,6 +1,8 @@
 """Script parsing and query preparation utilities."""
 import re
 
+from ml.ranking import rank_results
+
 def split_script(script, max_sentences=20):
     sentences = re.split(r'(?<=[.!?])\s+', script.strip())
 
@@ -17,11 +19,12 @@ def split_script(script, max_sentences=20):
 
 def search_script(script, search_engine):
     sentences, truncated = split_script(script)
+    search = search_engine if callable(search_engine) else search_engine.search
 
     output = []
 
     for index, sentence in enumerate(sentences, start=1):
-        results = search_engine.search(sentence)
+        results = search(sentence)
         ranked = rank_results(results)
 
         output.append({
