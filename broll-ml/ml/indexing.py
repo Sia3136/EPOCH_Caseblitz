@@ -33,7 +33,9 @@ def index_video(
     model=None,
     frame_interval=2.0,
     frames_per_segment=2,
+    segment_stride=None,
     thumbnail_dir="data/thumbnails",
+    cache_dir="data/index/cache",
 ):
     """Extract, embed, segment, and describe one video for indexing."""
     path = Path(video_path)
@@ -44,12 +46,40 @@ def index_video(
     if not frames:
         return []
 
-    embeddings = encode_images(frames, model=model)
+    cache_key = hashlib.sha256()
+    with path.open("rb") as video_file:
+        for chunk in iter(lambda: video_file.read(1024 * 1024), b""):
+            cache_key.update(chunk)
+    cache_key.update(
+        f"|{frame_interval}|{frames_per_segment}|{segment_stride}|clip-v1".encode()
+    )
+    cache_path = Path(cache_dir) / f"{cache_key.hexdigest()}.npz"
+
+    if cache_path.exists():
+        cached = np.load(cache_path)
+        embeddings = cached["embeddings"]
+        timestamps = cached["timestamps"].tolist()
+        extracted["duration"] = float(cached["duration"])
+    else:
+        embeddings = np.asarray(encode_images(frames, model=model), dtype=np.float32)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            cache_path,
+            embeddings=embeddings,
+            timestamps=np.asarray(timestamps, dtype=np.float32),
+            duration=extracted["duration"],
+        )
     frame_items = [
         {"timestamp": timestamp, "embedding": embedding}
         for timestamp, embedding in zip(timestamps, embeddings)
     ]
-    segments = build_segments(frame_items, group_size=frames_per_segment)
+    segments = build_segments(
+        frame_items,
+        group_size=frames_per_segment,
+        frame_interval=frame_interval,
+        duration=extracted["duration"],
+        stride=segment_stride,
+    )
     output = []
 
     for index, segment in enumerate(segments):
@@ -60,6 +90,7 @@ def index_video(
             f"{path.stem}_{index}",
         )
         output.append({
+            "video_id": path.stem,
             "video_path": str(path),
             "duration": extracted["duration"],
             "start": segment["start_time"],

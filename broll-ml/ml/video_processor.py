@@ -1,5 +1,6 @@
 """Safe OpenCV video reading and representative thumbnail generation."""
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
@@ -38,6 +39,15 @@ def extract_video_frames(video_path, interval=2.0, max_frames=15):
         "timestamps": timestamps,
         "duration": duration,
     }
+
+
+def extract_videos_parallel(video_paths, interval=2.0, max_frames=15, workers=4):
+    """Decode independent videos concurrently for ingestion benchmarks."""
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        return list(executor.map(
+            lambda path: extract_video_frames(path, interval, max_frames),
+            video_paths,
+        ))
 
 
 def save_thumbnail(video_path, timestamp, output_dir, name):

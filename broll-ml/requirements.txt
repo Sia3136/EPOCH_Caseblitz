@@ -7,3 +7,4 @@ faiss-cpu
 transformers
 streamlit
 pytest
+kaggle

@@ -17,6 +17,7 @@ def _ensure_schema(conn):
     conn.execute("""
         CREATE TABLE IF NOT EXISTS segments (
             segment_id TEXT PRIMARY KEY,
+            video_id TEXT NOT NULL,
             filename TEXT NOT NULL,
             video_path TEXT NOT NULL,
             duration REAL NOT NULL,
@@ -33,6 +34,13 @@ def _ensure_schema(conn):
     }
     if "thumbnail_path" not in columns:
         conn.execute("ALTER TABLE segments ADD COLUMN thumbnail_path TEXT")
+    if "video_id" not in columns:
+        conn.execute("ALTER TABLE segments ADD COLUMN video_id TEXT")
+        conn.execute(
+            "UPDATE segments SET video_id = "
+            "substr(filename, 1, instr(filename, '.') - 1) "
+            "WHERE video_id IS NULL"
+        )
 
 
 def save_library(all_segments):
@@ -59,13 +67,14 @@ def save_library(all_segments):
 
                 conn.execute("""
                     INSERT INTO segments (
-                        segment_id, filename, video_path,
+                        segment_id, video_id, filename, video_path,
                         duration, start_time, end_time,
                         thumbnail_path, faiss_id
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     f"segment_{faiss_id}",
+                    segment.get("video_id", video_path.stem),
                     video_path.name,
                     str(video_path),
                     segment["duration"],

@@ -7,11 +7,41 @@ from zipfile import ZipFile
 
 from app import extract_video_zip
 from ml.indexing import index_video
+from ml.evaluation import calibrate_threshold, evaluate_query
 from ml.ranking import rank_results
 from ml.script_processor import search_script
+from ml.segment_builder import build_segments
 
 
 class PipelineTests(TestCase):
+    def test_segment_end_covers_sampled_frame_window(self):
+        segments = build_segments(
+            [
+                {"timestamp": 0.0, "embedding": [1.0, 0.0]},
+                {"timestamp": 2.0, "embedding": [1.0, 0.0]},
+            ],
+            group_size=2,
+            frame_interval=2.0,
+            duration=3.5,
+        )
+        self.assertEqual(segments[0]["start_time"], 0.0)
+        self.assertEqual(segments[0]["end_time"], 3.5)
+
+    def test_overlapping_segments_use_configured_stride(self):
+        segments = build_segments(
+            [
+                {"timestamp": 0.0, "embedding": [1.0, 0.0]},
+                {"timestamp": 2.0, "embedding": [1.0, 0.0]},
+                {"timestamp": 4.0, "embedding": [0.0, 1.0]},
+            ],
+            group_size=2,
+            frame_interval=2.0,
+            duration=6.0,
+            stride=1,
+        )
+        self.assertEqual(len(segments), 3)
+        self.assertEqual(segments[1]["start_time"], 2.0)
+
     def test_zip_extracts_only_supported_videos(self):
         archive = BytesIO()
         with ZipFile(archive, "w") as zip_file:
@@ -53,6 +83,48 @@ class PipelineTests(TestCase):
         )
         self.assertEqual(len(result["scenes"]), 2)
         self.assertEqual(len(calls), 2)
+
+    def test_evaluation_uses_video_id_and_temporal_overlap(self):
+        def search(query, top_k=5, threshold=0.0):
+            return [{
+                "video_id": "video_001",
+                "start_time": 2.0,
+                "end_time": 6.0,
+                "similarity": 0.8,
+            }]
+
+        metrics = evaluate_query(
+            "person walking",
+            {
+                "video_id": "video_001",
+                "start_time": "3",
+                "end_time": "5",
+            },
+            search,
+        )
+        self.assertEqual(metrics["recall_at_k"], 1.0)
+        self.assertEqual(metrics["mrr"], 1.0)
+        self.assertEqual(metrics["temporal_iou"], 0.5)
+
+    def test_threshold_calibration_prefers_higher_recall(self):
+        rows = [{
+            "query": "person walking",
+            "video_id": "video_001",
+            "start_time": "0",
+            "end_time": "2",
+        }]
+
+        def search(query, top_k=5, threshold=0.0):
+            return [] if threshold > 0.5 else [{
+                "video_id": "video_001",
+                "start_time": 0.0,
+                "end_time": 2.0,
+            }]
+
+        self.assertEqual(
+            calibrate_threshold(rows, search, thresholds=[0.0, 0.75])["threshold"],
+            0.0,
+        )
 
 
 if __name__ == "__main__":

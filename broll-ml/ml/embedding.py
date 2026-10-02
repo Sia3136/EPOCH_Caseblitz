@@ -14,6 +14,8 @@ def get_clip_model():
 
 def encode_images(images, model=None):
     encoder = model or get_clip_model()
+    if hasattr(encoder, "encode_image_batch"):
+        return encoder.encode_image_batch(images)
     return [encoder.encode_image(image) for image in images]
 
 

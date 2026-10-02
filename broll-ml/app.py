@@ -71,8 +71,11 @@ def validate_videos(video_paths):
     valid = []
     skipped = []
     for path in video_paths:
-        result = extract_video_frames(path, max_frames=1)
-        if result["frames"]:
+        try:
+            result = extract_video_frames(path, max_frames=1)
+        except (OSError, ValueError):
+            result = {"frames": [], "duration": 0.0}
+        if result["frames"] and result["duration"] <= 60:
             valid.append(path)
         else:
             skipped.append(path)
@@ -136,6 +139,11 @@ def main():
             st.error(str(error))
 
     st.divider()
+    from ml.storage import INDEX_PATH
+
+    if not INDEX_PATH.exists():
+        st.info("Upload and index a video library to begin searching.")
+
     mode = st.radio("Search mode", ["Text Search", "Script Search"], horizontal=True)
     threshold = st.slider("Minimum similarity", 0.0, 1.0, 0.20, 0.01)
 

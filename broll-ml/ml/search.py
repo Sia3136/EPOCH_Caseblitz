@@ -15,7 +15,10 @@ def search_videos(
     if not query or not query.strip():
         return []
 
-    index = load_index()
+    try:
+        index = load_index()
+    except FileNotFoundError:
+        return []
     if index.ntotal == 0:
         return []
 
