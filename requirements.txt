@@ -3,12 +3,11 @@ uvicorn[standard]
 python-multipart
 pydantic
 pytest
-httpx
-
 opencv-python-headless
 numpy
+httpx
 
 torch
-torchvision
-transformers
+open_clip_torch
 faiss-cpu
+Pillow
