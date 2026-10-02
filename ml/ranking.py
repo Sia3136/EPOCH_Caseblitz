@@ -1,4 +1,4 @@
-"""Result ranking utilities."""
+﻿"""Result ranking utilities."""
 def similarity_to_percentage(
     score,
     min_score=0.15,
@@ -30,7 +30,10 @@ def rank_results(results, threshold=35, max_results=5):
         if percentage < threshold:
             continue
 
-        clip_id = result["clip_id"]
+        clip_id = result.get(
+            "clip_id",
+            result.get("video_path", result.get("filename", "unknown")),
+        )
         count = clip_counts.get(clip_id, 0)
 
         if count >= 2:

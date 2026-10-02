@@ -1,4 +1,4 @@
-"""CLIP model loading and embedding helpers."""
+﻿"""CLIP model loading and embedding helpers."""
 import torch
 import open_clip
 from PIL import Image

@@ -1,4 +1,4 @@
-"""Video captioning helpers."""
+﻿"""Video captioning helpers."""
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image

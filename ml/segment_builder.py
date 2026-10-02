@@ -1,4 +1,4 @@
-"""Utilities for building video segments from extracted frames."""
+﻿"""Utilities for building video segments from extracted frames."""
 import numpy as np
 
 def build_segments(frames, group_size=3):

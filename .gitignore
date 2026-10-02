@@ -1,6 +1,27 @@
+# Python
 venv/
+.venv/
 __pycache__/
+*.pyc
 .pytest_cache/
+
+# Data (generated at runtime)
 data/videos/
 data/*.db
 data/*.index
+data/index/
+data/thumbnails/
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Env files (contain secrets / local config)
+.env
+frontend/.env
+
+# Misc
+.DS_Store
+*.log

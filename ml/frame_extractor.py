@@ -1,4 +1,4 @@
-"""Video frame extraction utilities."""
+﻿"""Video frame extraction utilities."""
 import cv2
 
 def extract_frames(video_path):

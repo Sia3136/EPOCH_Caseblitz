@@ -1,9 +1,10 @@
 from pathlib import Path
 
-from .ml_runtime.clip_model import CLIPModel
-from .ml_runtime.frame_extractor import extract_frames
-from .ml_runtime.segment_builder import build_segments
-from .ml_runtime.vector_store import VectorStore
+import numpy as np
+from ml.clip_model import CLIPModel
+from ml.frame_extractor import extract_frames
+from ml.segment_builder import build_segments
+from ml.vector_store import VectorStore
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,15 +73,16 @@ def embed_video(path: Path, clip_id: str):
 def search(query: str, k: int):
     clip, store = _get_models()
 
-    results = store.search(
-        clip.encode_text(query),
-        top_k=k
-    )
+    if store.index.ntotal == 0:
+        return []
+
+    query_vec = clip.encode_text(query)
+    query_np = np.asarray(query_vec, dtype=np.float32).reshape(1, -1)
+
+    scores, indices = store.index.search(query_np, min(k, store.index.ntotal))
 
     return [
-        (
-            int(result["faiss_id"]) if "faiss_id" in result else i,
-            float(result["similarity"])
-        )
-        for i, result in enumerate(results)
+        (int(idx), float(score))
+        for score, idx in zip(scores[0], indices[0])
+        if idx >= 0
     ]

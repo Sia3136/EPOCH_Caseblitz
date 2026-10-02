@@ -1,4 +1,4 @@
-"""Metadata models and persistence helpers."""
+﻿"""Metadata models and persistence helpers."""
 import sqlite3
 
 class MetadataStore:

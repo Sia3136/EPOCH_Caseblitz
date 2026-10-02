@@ -9,3 +9,6 @@ httpx
 torch
 transformers
 Pillow
+open_clip_torch
+faiss-cpu
+streamlit

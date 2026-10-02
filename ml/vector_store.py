@@ -1,4 +1,4 @@
-"""Vector index persistence and lookup helpers."""
+﻿"""Vector index persistence and lookup helpers."""
 import faiss
 import numpy as np
 import os
@@ -17,6 +17,9 @@ class VectorStore:
         self.metadata.append(metadata)
 
     def search(self, query_embedding, top_k=10):
+        if self.index.ntotal == 0:
+            return []
+
         query = np.asarray(
             query_embedding, dtype=np.float32
         ).reshape(1, -1)
