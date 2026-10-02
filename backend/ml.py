@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from ml.clip_model import CLIPModel
-from ml.frame_extractor import extract_frames
-from ml.segment_builder import build_segments
-from ml.vector_store import VectorStore
+from .ml_runtime.clip_model import CLIPModel
+from .ml_runtime.frame_extractor import extract_frames
+from .ml_runtime.segment_builder import build_segments
+from .ml_runtime.vector_store import VectorStore
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
