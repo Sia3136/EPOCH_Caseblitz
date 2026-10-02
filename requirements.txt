@@ -3,3 +3,5 @@ uvicorn[standard]
 python-multipart
 pydantic
 pytest
+opencv-python-headless
+numpy
