@@ -16,10 +16,14 @@ from .upload import process_upload
 from .zip_utils import UploadError
 
 # Krups's module: backend/ml.py must expose embed_video(path, clip_id) and search(query, k).
+MODEL_ERROR = None
 try:
     from .ml import embed_video as EMBED_FN, search as SEARCH_FN
-except ImportError:
+except Exception as e:                      # not just ImportError: missing files etc. must be visible
+    import logging
+    logging.getLogger("uvicorn.error").exception("backend/ml.py failed to load; model disabled")
     EMBED_FN = SEARCH_FN = None
+    MODEL_ERROR = f"{type(e).__name__}: {e}"
 
 app = FastAPI(title="B-roll Search API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -42,7 +46,7 @@ def _require_search():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model_connected": SEARCH_FN is not None}
+    return {"ok": True, "model_connected": SEARCH_FN is not None, "model_error": MODEL_ERROR}
 
 
 @app.post("/upload", response_model=UploadResponse)
