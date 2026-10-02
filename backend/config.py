@@ -17,3 +17,7 @@ PERCENT_THRESHOLD = 35
 MAX_SEGMENTS_PER_CLIP = 2
 MIN_WORDS = 3
 MAX_SENTENCES = 20
+
+# Search
+RAW_K = 20     # raw hits fetched from FAISS before dedup/threshold
+TOP_K = 5      # results returned to the UI
