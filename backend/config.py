@@ -21,3 +21,5 @@ MAX_SENTENCES = 20
 # Search
 RAW_K = 20     # raw hits fetched from FAISS before dedup/threshold
 TOP_K = 5      # results returned to the UI
+
+THUMB_DIR = DATA_DIR / "thumbnails"

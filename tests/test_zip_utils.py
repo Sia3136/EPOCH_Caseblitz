@@ -1,6 +1,6 @@
 import zipfile
 import pytest
-from backend.zip_utils import validate_zip, UploadError
+from EPOCH_Caseblitz.backend.zip_utils import validate_zip, UploadError
 
 
 def make_zip(tmp_path, names):
