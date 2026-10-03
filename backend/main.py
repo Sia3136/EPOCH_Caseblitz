@@ -46,8 +46,11 @@ def _require_search():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model_connected": SEARCH_FN is not None, "model_error": MODEL_ERROR}
-
+    return {
+        "ok": True,
+        "model_connected": SEARCH_FN is not None,
+        "model_error": MODEL_ERROR
+    }
 
 @app.post("/upload", response_model=UploadResponse)
 def upload(file: UploadFile = File(...)):
@@ -73,7 +76,32 @@ def status():
 
 @app.post("/search", response_model=SearchResponse)
 def search(req: SearchRequest):
-    return search_clips(req.query, _require_search())
+    if not req.query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a search query."
+        )
+
+    try:
+        return search_clips(
+            req.query.strip(),
+            _require_search()
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        import logging
+
+        logging.getLogger("uvicorn.error").exception(
+            "Search failed"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed: {type(e).__name__}: {e}"
+        )
 
 
 @app.post("/script", response_model=ScriptResponse)
