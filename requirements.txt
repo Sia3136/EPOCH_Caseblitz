@@ -10,5 +10,7 @@ numpy
 
 torch
 torchvision
+Pillow
+open_clip_torch
 transformers
 faiss-cpu
