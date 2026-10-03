@@ -1,4 +1,7 @@
 """Result ranking utilities."""
+MIN_CONFIDENCE_SCORE = 35
+
+
 def similarity_to_percentage(
     score,
     min_score=0.15,
@@ -12,7 +15,11 @@ def similarity_to_percentage(
     )
 
 
-def rank_results(results, threshold=35, max_results=5):
+def rank_results(
+    results,
+    threshold=MIN_CONFIDENCE_SCORE,
+    max_results=5,
+):
     results = sorted(
         results,
         key=lambda x: x["similarity"],

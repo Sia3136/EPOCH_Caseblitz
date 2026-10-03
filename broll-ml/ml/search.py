@@ -3,7 +3,11 @@ import re
 
 from ml.embedding import encode_search_text, encode_text
 from ml.indexing import load_cached_frame_embeddings
-from ml.ranking import rank_results, similarity_to_percentage
+from ml.ranking import (
+    MIN_CONFIDENCE_SCORE,
+    rank_results,
+    similarity_to_percentage,
+)
 from ml.reranking import frame_level_rerank
 from ml.storage import get_all_segment_metadata, load_index
 
@@ -291,7 +295,11 @@ def search_videos(
             # Captioning is an enhancement; visual CLIP search remains usable.
             pass
 
-    ranked_results = rank_results(results, threshold=0, max_results=top_k)
+    ranked_results = rank_results(
+        results,
+        threshold=MIN_CONFIDENCE_SCORE,
+        max_results=top_k,
+    )
     if len(concepts) > 1:
         ranked_results.sort(
             key=lambda item: item.get("_query_order", top_k)
