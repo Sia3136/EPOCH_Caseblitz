@@ -278,11 +278,11 @@ function VideoModal({ clip, onClose }: { clip: NormalisedResult; onClose: () => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function UploadModal({
-  onClose, onDone, composerRef,
+  onClose, onDone, onGoToSearch,
 }: {
   onClose: () => void;
   onDone: (clips: number, segments: number) => void;
-  composerRef: React.RefObject<HTMLElement | null>;
+  onGoToSearch: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState(0);
@@ -326,11 +326,7 @@ function UploadModal({
   }
 
   function handleStartSearching() {
-    onClose();
-    // Scroll to composer after modal closes
-    setTimeout(() => {
-      composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+    onGoToSearch();
   }
 
   return (
@@ -342,12 +338,12 @@ function UploadModal({
           <>
             <div className="drop-icon"><Icon name="upload" size={30} /></div>
             <span className="modal-kicker">Build your visual memory</span>
-            <h2>Index your footage.</h2>
-            <p>Upload one ZIP containing MP4 or MOV clips (up to 50 files, 500 MB max). We extract frames and build a searchable index automatically.</p>
+            <h2>Upload your folder.</h2>
+            <p>Upload one ZIP containing MP4 or MOV clips (max size of folder is 500mb, max 50 clips, max 60s per clip). We extract frames and build a searchable index automatically.</p>
             <button className="choose-button" onClick={() => inputRef.current?.click()}>
-              Choose ZIP file <Icon name="arrow" />
+              Upload folder <Icon name="arrow" />
             </button>
-            <small>ZIP only · MP4 / MOV inside · 500 MB max · no account needed</small>
+            <small>ZIP only · MP4 / MOV inside · 500MB max folder · max 50 clips · max 60s per clip</small>
             {error && <p className="upload-error">{error}</p>}
           </>
         )}
@@ -355,8 +351,13 @@ function UploadModal({
         {(busy || done) && (
           <div className="upload-progress-wrap">
             <div className="upload-progress-kicker">{done ? "✓ Indexed" : "Indexing in progress"}</div>
+            {!done && (
+              <div className="fun-status-message" style={{ marginBottom: "12px", fontSize: "14px", color: "var(--ink)", fontWeight: "800", display: "flex", alignItems: "center" }}>
+                {progress < 20 ? "Warming up the engines..." : progress < 45 ? "Analyzing pixels, finding the magic..." : progress < 70 ? "Teaching AI your story..." : progress < 90 ? "Connecting the dots..." : "Almost there, putting on the final touches..."}
+              </div>
+            )}
             <div className="upload-bar-track">
-              <div className="upload-bar-fill" style={{ width: `${progress}%` }} />
+              <div className="upload-bar-fill" style={{ width: `${progress}%`, transition: "width 0.3s ease" }} />
             </div>
             <div className="upload-stage-grid">
               {STAGES.map((s, i) => (
@@ -370,7 +371,7 @@ function UploadModal({
             {currentClip && !done && <p className="upload-clip-name">Processing: {currentClip}</p>}
             {done && (
               <>
-                <p className="upload-done-msg">Library ready to search.</p>
+                <p className="upload-done-msg">Indexing complete. Ready to search for your context.</p>
                 {skipped.length > 0 && (
                   <details className="upload-skipped">
                     <summary>{skipped.length} file{skipped.length > 1 ? "s" : ""} skipped (unreadable)</summary>
@@ -379,7 +380,7 @@ function UploadModal({
                 )}
                 {/* ── KEY FIX: navigates to composer ── */}
                 <button className="choose-button" style={{ marginTop: 20 }} onClick={handleStartSearching}>
-                  Start searching <Icon name="arrow" />
+                  Open indexed library <Icon name="arrow" />
                 </button>
               </>
             )}
@@ -397,6 +398,31 @@ function UploadModal({
 // App
 // ─────────────────────────────────────────────────────────────────────────────
 
+function IndexedLibraryPage({
+  stats,
+  onSearch,
+  onUpload,
+}: {
+  stats: { clips: number; segments: number };
+  onSearch: () => void;
+  onUpload: () => void;
+}) {
+  return <main className="indexed-page">
+    <nav className="topbar indexed-topbar">
+      <span className="brand"><span className="brand-mark"><Icon name="aperture" size={25} /></span><span>FRAME<span className="brand-accent">MIND</span></span><sup>AI</sup></span>
+      <button className="nav-index-btn" onClick={onUpload}><Icon name="upload" size={15} />Upload your folder</button>
+    </nav>
+    <section className="indexed-content">
+      <div className="eyebrow"><span>04</span> Library intelligence</div>
+      <h1>Your footage is<br /><em>ready to search.</em></h1>
+      <p className="indexed-lede">Your visual library has been indexed. Search by meaning, or let your story find the shots for you.</p>
+      <div className="indexed-stats"><div><span>CLIPS INDEXED</span><strong>{stats.clips}</strong></div><div><span>SEARCHABLE SEGMENTS</span><strong>{stats.segments}</strong></div><div><span>INDEX STATUS</span><strong className="indexed-ready">READY</strong></div></div>
+      <div className="indexed-actions"><button className="nav-index-btn" onClick={onSearch}>Search your footage <Icon name="arrow" size={15} /></button></div>
+      <div className="indexed-note"><Icon name="check" size={14} /> CLIP embeddings · FAISS index · Runs locally</div>
+    </section>
+  </main>;
+}
+
 export default function App() {
   const composerRef = useRef<HTMLElement>(null);
 
@@ -406,15 +432,41 @@ export default function App() {
     "Starting my own business was the biggest risk I ever took. Every morning, I shaped the work with my own two hands. Slowly, the city began to notice what we were building.",
   );
 
-  const [results, setResults]             = useState<NormalisedResult[]>([]);
-  const [scriptScenes, setScriptScenes]   = useState<Array<{ scene_index: number; sentence: string; results: NormalisedResult[] }>>([]);
+  const [results, setResults]             = useState<NormalisedResult[]>([
+    { clipId: "s1", file: "walking_night.mp4", title: "City walking", caption: "A solitary figure walking down a neon-lit street.", time: "01:23 → 01:30", start: 83, end: 90, score: 96, qualityFlag: "", image: "https://images.unsplash.com/photo-1555589943-4f9b8c0c10c2?auto=format&fit=crop&w=400&q=80", videoUrl: "" },
+    { clipId: "s2", file: "alleyway_02.mp4", title: "Dark alley", caption: "Person walking away in a dark alley.", time: "00:10 → 00:15", start: 10, end: 15, score: 89, qualityFlag: "dark", image: "https://images.unsplash.com/photo-1509822929063-6b6cfc9b42f2?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
+  ]);
+  const [scriptScenes, setScriptScenes]   = useState<Array<{ scene_index: number; sentence: string; results: NormalisedResult[] }>>([
+    {
+      scene_index: 0,
+      sentence: "Starting my own business was the biggest risk I ever took.",
+      results: [
+        { clipId: "d1", file: "leap_of_faith_01.mp4", title: "Looking over the city", caption: "A person standing at the edge of a rooftop at dusk.", time: "00:12 → 00:18", start: 12, end: 18, score: 94, qualityFlag: "", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80", videoUrl: "" },
+        { clipId: "d2", file: "office_late_night.mp4", title: "Working late", caption: "Silhouette typing on a laptop in a dark office.", time: "00:45 → 00:52", start: 45, end: 52, score: 87, qualityFlag: "dark", image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
+      ]
+    },
+    {
+      scene_index: 1,
+      sentence: "Every morning, I shaped the work with my own two hands.",
+      results: [
+        { clipId: "d3", file: "pottery_wheel.mp4", title: "Hands shaping clay", caption: "Close up of muddy hands shaping a vase.", time: "00:10 → 00:18", start: 10, end: 18, score: 91, qualityFlag: "", image: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
+      ]
+    },
+    {
+      scene_index: 2,
+      sentence: "Slowly, the city began to notice what we were building.",
+      results: [
+        { clipId: "d4", file: "city_sunrise.mp4", title: "City skyline at dawn", caption: "Time-lapse of the city waking up.", time: "00:00 → 00:08", start: 0, end: 8, score: 88, qualityFlag: "", image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
+      ]
+    }
+  ]);
   const [activeScene, setActiveScene]     = useState(0);
   const [scriptTruncated, setScriptTruncated] = useState(false);
 
   const [analyzing, setAnalyzing]             = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const [error, setError]                     = useState("");
-  const [hasResults, setHasResults]           = useState(false);
+  const [hasResults, setHasResults]           = useState(true);
 
   const [hideBlurry, setHideBlurry] = useState(false);
   const [hideDark, setHideDark]     = useState(false);
@@ -423,6 +475,8 @@ export default function App() {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [playClip, setPlayClip]         = useState<NormalisedResult | null>(null);
   const [libraryOpen, setLibraryOpen]   = useState(false);
+  const [libraryReady, setLibraryReady] = useState(false);
+  const [startedSearching, setStartedSearching] = useState(false);
 
   const [modelConnected, setModelConnected] = useState<boolean | null>(null);
   const [indexStats, setIndexStats]         = useState<{ clips: number; segments: number } | null>(null);
@@ -513,6 +567,10 @@ export default function App() {
       ? { background: "var(--acid)", boxShadow: "0 0 10px var(--acid)", animation: "pulse 2s infinite" }
       : { background: "#e05252" };
 
+  if (libraryReady && indexStats) {
+    return <IndexedLibraryPage stats={indexStats} onSearch={() => { setLibraryReady(false); setMode("search"); setStartedSearching(true); setTimeout(() => composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); }} onUpload={() => { setLibraryReady(false); setLibraryOpen(true); }} />;
+  }
+
   return (
     <main className="app-shell">
       <div className="noise" />
@@ -535,7 +593,7 @@ export default function App() {
           {/* Single CTA button — replaces Library + Add footage */}
           <button className="upload-button nav-index-btn" onClick={() => setLibraryOpen(true)}>
             <Icon name="upload" size={15} />
-            Index footage
+            Upload your folder
           </button>
         </div>
       </nav>
@@ -548,29 +606,33 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="eyebrow"><span>01</span> Narrative intelligence for editors</div>
-        <div className="hero-grid">
-          <div>
-            <h1>Your story,<span>already in frame.</span></h1>
-          </div>
-          <div className="hero-aside">
-            <Icon name="wave" size={28} />
-            <p>Stop searching by filename. Describe the feeling, paste the narrative, find the exact moment.</p>
-          </div>
-        </div>
-        <TrustBar />
-        <div className="hero-marquee" aria-hidden="true">
-          SEMANTIC SEARCH <i /> SCENE MATCHING <i /> TIMESTAMP PRECISION
-        </div>
-      </section>
+      {!startedSearching && (
+        <>
+          {/* ── Hero ── */}
+          <section className="hero">
+            <div className="eyebrow"><span>01</span> Narrative intelligence for editors</div>
+            <div className="hero-grid">
+              <div>
+                <h1>Your story,<span>already in frame.</span></h1>
+              </div>
+              <div className="hero-aside">
+                <Icon name="wave" size={28} />
+                <p>Stop searching by filename. Describe the feeling, paste the narrative, find the exact moment.</p>
+              </div>
+            </div>
+            <div className="hero-marquee" aria-hidden="true">
+              SEMANTIC SEARCH <i /> SCENE MATCHING <i /> TIMESTAMP PRECISION
+            </div>
+            <TrustBar />
+          </section>
 
-      {/* ── Before / After ── */}
-      <BeforeAfter onUpload={() => setLibraryOpen(true)} />
+          {/* ── Before / After ── */}
+          <BeforeAfter onUpload={() => setLibraryOpen(true)} />
 
-      {/* ── How It Works ── */}
-      <HowItWorks onUpload={() => setLibraryOpen(true)} />
+          {/* ── How It Works ── */}
+          <HowItWorks onUpload={() => setLibraryOpen(true)} />
+        </>
+      )}
 
       {/* ── Composer ── */}
       <section className="workspace" ref={composerRef as React.Ref<HTMLElement>}>
@@ -701,9 +763,9 @@ export default function App() {
 
       {libraryOpen && (
         <UploadModal
-          composerRef={composerRef}
           onClose={() => setLibraryOpen(false)}
-          onDone={(clips, segments) => { setIndexStats({ clips, segments }); setLibraryOpen(false); setTimeout(() => composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); }}
+          onDone={(clips, segments) => { setIndexStats({ clips, segments }); }}
+          onGoToSearch={() => { setLibraryOpen(false); setLibraryReady(true); }}
         />
       )}
       {playClip && (
