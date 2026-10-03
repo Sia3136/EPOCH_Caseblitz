@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
         "/status":     { target: backendUrl, changeOrigin: true },
         "/videos":     { target: backendUrl, changeOrigin: true },
         "/thumbnails": { target: backendUrl, changeOrigin: true },
+        "/serve_file": { target: backendUrl, changeOrigin: true },
       },
     },
   };
