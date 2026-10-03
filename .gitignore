@@ -1,28 +1,9 @@
-# Virtual environment
 venv/
-.venv/
-
-# Python cache
 __pycache__/
-*.py[cod]
-
-# Test cache
 .pytest_cache/
-
-# Generated data
-data/
-test_videos/
-
-# Local test uploads
-*.zip
-
-# Environment variables
-.env
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
+data/videos/
+data/*.db
+data/*.index
+data/*.npy
+data/index/*.index
+data/index/*.npy

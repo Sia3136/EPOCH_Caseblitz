@@ -2,7 +2,6 @@ fastapi
 uvicorn[standard]
 python-multipart
 pydantic
-
 pytest
 httpx
 
@@ -10,8 +9,8 @@ opencv-python-headless
 numpy
 
 torch
+torchvision
+Pillow
 open_clip_torch
-faiss-cpu
 transformers
-Pillowopencv-python
-httpx2
+faiss-cpu
