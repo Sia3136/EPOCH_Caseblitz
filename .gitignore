@@ -1,27 +1,28 @@
-# Python
+# Virtual environment
 venv/
 .venv/
+
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Test cache
 .pytest_cache/
 
-# Data (generated at runtime)
-data/videos/
-data/*.db
-data/*.index
-data/index/
-data/thumbnails/
+# Generated data
+data/
+test_videos/
 
-# Node
-node_modules/
-frontend/node_modules/
-dist/
-frontend/dist/
+# Local test uploads
+*.zip
 
-# Env files (contain secrets / local config)
+# Environment variables
 .env
-frontend/.env
 
-# Misc
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
-*.log
+Thumbs.db

@@ -16,10 +16,14 @@ from .upload import process_upload
 from .zip_utils import UploadError
 
 # Krups's module: backend/ml.py must expose embed_video(path, clip_id) and search(query, k).
+MODEL_ERROR = None
 try:
     from .ml import embed_video as EMBED_FN, search as SEARCH_FN
-except ImportError:
+except Exception as e:                      # not just ImportError: missing files etc. must be visible
+    import logging
+    logging.getLogger("uvicorn.error").exception("backend/ml.py failed to load; model disabled")
     EMBED_FN = SEARCH_FN = None
+    MODEL_ERROR = f"{type(e).__name__}: {e}"
 
 app = FastAPI(title="B-roll Search API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -42,8 +46,11 @@ def _require_search():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model_connected": SEARCH_FN is not None}
-
+    return {
+        "ok": True,
+        "model_connected": SEARCH_FN is not None,
+        "model_error": MODEL_ERROR
+    }
 
 @app.post("/upload", response_model=UploadResponse)
 def upload(file: UploadFile = File(...)):
@@ -69,7 +76,32 @@ def status():
 
 @app.post("/search", response_model=SearchResponse)
 def search(req: SearchRequest):
-    return search_clips(req.query, _require_search())
+    if not req.query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a search query."
+        )
+
+    try:
+        return search_clips(
+            req.query.strip(),
+            _require_search()
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        import logging
+
+        logging.getLogger("uvicorn.error").exception(
+            "Search failed"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed: {type(e).__name__}: {e}"
+        )
 
 
 @app.post("/script", response_model=ScriptResponse)
