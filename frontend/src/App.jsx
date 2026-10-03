@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { searchClips, searchScript } from './api';
 import { clips, sampleScript } from './data';
 import Navbar from './components/Navbar';
@@ -20,11 +20,9 @@ export default function App() {
   const [scenes, setScenes] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [playClip, setPlayClip] = useState(null);
-  const [library, setLibrary] = useState(null);
 
   function navigate(next) { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  function play(clip) { setPlayClip(clip); }
+  function play(clip) { window.alert(`Preview would start at ${clip.time.split('–')[0]} in ${clip.file}.`); }
   async function runSearch(event) { event?.preventDefault(); const nextQuery = query.trim() || 'person walking alone at night'; setBusy(true); setError(''); try { const response = await searchClips(nextQuery); setResults(response.results); setSelected(response.results[0] || null); navigate('results'); if (response.message) setError(response.message); } catch (requestError) { setError(requestError.message); } finally { setBusy(false); } }
   async function runScript() { setBusy(true); setError(''); try { setScenes(await searchScript(script)); } catch (requestError) { setError(requestError.message); } finally { setBusy(false); } }
   return <div className="shell">{view === 'home' && <Navbar view={view} onNavigate={navigate} />}
@@ -32,59 +30,8 @@ export default function App() {
     {view === 'home' && <LandingPage onUpload={() => navigate('upload')} />}
     {view === 'results' && <WorkspaceShell active="search" onNavigate={navigate}><Results query={query || 'person walking alone at night'} results={results} selected={selected} setSelected={setSelected} onPlay={play} busy={busy} onNew={() => navigate('home')} /></WorkspaceShell>}
     {view === 'script' && <WorkspaceShell active="script" onNavigate={navigate}><ScriptMode script={script} setScript={setScript} scenes={scenes} onRun={runScript} onPlay={play} busy={busy} /></WorkspaceShell>}
-    {view === 'upload' && <><header className="upload-backbar"><button onClick={() => navigate('home')}>← Back to FrameFind</button></header><UploadPanel onComplete={(summary) => { setLibrary(summary); navigate('library'); }} /></>}
-    {view === 'library' && <LibraryReady library={library} onNavigate={navigate} />}
-    {playClip && <VideoModal clip={playClip} onClose={() => setPlayClip(null)} />}
+    {view === 'upload' && <UploadPanel />}
   </div>;
-}
-
-function VideoModal({ clip, onClose }) {
-  const videoRef = useRef(null);
-
-  // Parse start time from "MM:SS–MM:SS" format
-  function parseStart(timeStr) {
-    const part = (timeStr || '').split('–')[0].trim();
-    const [mm, ss] = part.split(':').map(Number);
-    return (mm || 0) * 60 + (ss || 0);
-  }
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    function seekOnLoad() {
-      el.currentTime = parseStart(clip.time);
-      el.play().catch(() => {});
-    }
-    el.addEventListener('loadedmetadata', seekOnLoad);
-    return () => el.removeEventListener('loadedmetadata', seekOnLoad);
-  }, [clip]);
-
-  // Close on backdrop click or Escape key
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div className="video-modal-backdrop" role="dialog" aria-modal="true" aria-label="Video preview" onClick={onClose}>
-      <div className="video-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="video-modal-close" onClick={onClose} aria-label="Close video preview">✕</button>
-        <video
-          ref={videoRef}
-          src={clip.videoUrl}
-          controls
-          autoPlay
-          className="video-modal-player"
-        />
-        <div className="video-modal-meta">
-          <span className="eyebrow">{clip.time}</span>
-          <span className="video-modal-title">{clip.file}</span>
-          {clip.caption && <p className="video-modal-caption">{clip.caption}</p>}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function Home({ query, setQuery, onSearch, onQuery, onUpload }) { return <section className="view active"><div className="hero"><div className="hero-copy"><div className="eyebrow">Semantic B-roll search</div><h1>Find the shot behind the story.</h1><p>Describe a scene, mood, or moment. FrameFind finds the strongest visual match in your footage.</p><form className="search-box" onSubmit={onSearch}><span className="muted">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try: a person walking alone at night" aria-label="Search footage" /><button className="primary" type="submit">Search</button></form><div className="chips">{['busy marketplace at night', 'hands preparing food', 'rain against a window'].map((item) => <button className="chip" key={item} onClick={() => onQuery(item)}>{item}</button>)}</div><div className="library-line"><span className="dot" />214 searchable segments <span className="muted">·</span> <span className="muted">47 clips indexed</span></div></div><div className="contact-sheet">{images.map((image, index) => <div className="frame" key={image}><img src={image} alt="Curated footage still" /><span className="mono">{['TC 01:14:02', '92% match · 00:43', 'scene 04', 'indexed'][index]}</span></div>)}</div></div></section>; }
@@ -92,7 +39,3 @@ function Home({ query, setQuery, onSearch, onQuery, onUpload }) { return <sectio
 function Results({ query, results, selected, setSelected, onPlay, busy, onNew }) { return <section className="view active"><div className="toolbar"><div><div className="eyebrow">Search results</div><h2>Matches for “{query}”</h2><p>{busy ? 'Searching your visual library…' : `${results.length} moments ranked by semantic similarity.`}</p></div><button className="icon-btn" onClick={onNew}>New search ↗</button></div>{results.length === 0 ? <div className="empty">No strong match found. Try describing the subject, action, location, or atmosphere differently.</div> : <div className="results-layout"><div className="results">{results.map((clip) => <ResultCard key={clip.file} clip={clip} selected={selected?.file === clip.file} onSelect={() => setSelected(clip)} onPlay={onPlay} />)}</div>{selected && <VideoPreview clip={selected} onPlay={onPlay} />}</div>}</section>; }
 
 function ScriptMode({ script, setScript, scenes, onRun, onPlay, busy }) { return <section className="view active"><div className="script-head"><div className="eyebrow">Script mode</div><h2>Build from the script.</h2><p>Paste narration or a creative brief. FrameFind finds footage scene by scene.</p></div><textarea value={script} onChange={(event) => setScript(event.target.value)} placeholder="Paste narration or a creative brief…" /><div className="script-actions"><span className="muted">{scenes.length || 3} scenes · {script.split(/\s+/).filter(Boolean).length} words</span><button className="primary" onClick={onRun}>{busy ? 'Finding scenes…' : 'Find footage for each scene'}</button></div>{scenes.map((scene) => <SceneBlock key={scene.scene_index} scene={scene} onPlay={onPlay} />)}</section>; }
-
-function LibraryReady({ library, onNavigate }) {
-  return <section className="library-ready"><div className="eyebrow">Index complete</div><h1>Your footage is ready.</h1><p>Every searchable moment from your upload is now available to explore.</p><div className="library-ready-grid"><div><span className="mono">CLIPS INDEXED</span><strong>{library?.clips ?? '—'}</strong></div><div><span className="mono">SEARCHABLE SEGMENTS</span><strong>{library?.segments ?? '—'}</strong></div><div><span className="mono">STATUS</span><strong className="ready-text">READY</strong></div></div><div className="library-ready-actions"><button className="primary" onClick={() => onNavigate('results')}>Search your footage</button><button className="secondary-action" onClick={() => onNavigate('script')}>Open Script Mode</button><button className="text-action" onClick={() => onNavigate('upload')}>Index another folder</button></div></section>;
-}
