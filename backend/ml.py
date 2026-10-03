@@ -11,6 +11,7 @@ from ml.clip_model import CLIPModel
 from ml.frame_extractor import extract_frames
 from ml.segment_builder import build_segments
 from ml.vector_store import VectorStore
+from ml.storage import get_segment_metadata as get_canonical_segment_metadata
 
 
 logger = logging.getLogger(__name__)
@@ -64,10 +65,11 @@ def embed_video(path: Path, clip_id: str):
             "No frames could be extracted from video."
         )
 
-    for frame in frames:
-        frame["embedding"] = clip.encode_image(
-            frame["frame"]
-        )
+    images = [frame["frame"] for frame in frames]
+    embeddings = clip.encode_image_batch(images, batch_size=32)
+
+    for i, frame in enumerate(frames):
+        frame["embedding"] = embeddings[i]
 
     segments = build_segments(frames)
 
@@ -202,6 +204,15 @@ def _lookup_segment(faiss_pos: int):
         ).fetchone()
 
     if not row:
+        canonical = get_canonical_segment_metadata(faiss_pos)
+        if canonical:
+            return {
+                "clip_id": canonical["segment_id"],
+                "start_time": canonical["start_time"],
+                "end_time": canonical["end_time"],
+                "filename": canonical["filename"],
+                "video_path": canonical["video_path"],
+            }
         return None
 
     return dict(row)

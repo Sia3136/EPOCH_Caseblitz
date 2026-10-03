@@ -126,7 +126,7 @@ def _caption_result(frame):
 
     try:
 
-        from ml.captioner import BrollCaptioner
+        from ml.captioner import get_captioner
         from PIL import Image
 
         rgb = cv2.cvtColor(
@@ -138,7 +138,7 @@ def _caption_result(frame):
             rgb
         )
 
-        captioner = BrollCaptioner()
+        captioner = get_captioner()
 
         return captioner.caption(
             image

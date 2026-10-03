@@ -21,6 +21,15 @@ logger = logging.getLogger("uvicorn.error")
 
 
 MODEL_ERROR = None
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+def _find_existing_video(path, filename=None):
+    candidates = [Path(path)]
+    if filename:
+        candidates.append(ROOT_DIR / "data" / "videos" / filename)
+        candidates.extend((ROOT_DIR / "data" / "videos").rglob(filename))
+    return next((candidate for candidate in candidates if candidate.exists()), None)
 
 try:
     from .ml import embed_video, search as ml_search
@@ -217,18 +226,50 @@ def video(clip_id: str):
         ).fetchone()
 
     if not row:
-        raise HTTPException(
-            status_code=404,
-            detail="Video not found.",
-        )
+        from ml.storage import get_all_segment_metadata
 
-    video_path = Path(row["video_path"])
-
-    if not video_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Video file no longer exists.",
+        canonical_rows = get_all_segment_metadata()
+        canonical = next(
+            (
+                item for item in canonical_rows
+                if item["segment_id"] == clip_id
+                or Path(item["video_path"]).stem == clip_id
+            ),
+            None,
         )
+        if canonical:
+            row = {"video_path": canonical["video_path"]}
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Video not found.",
+            )
+
+    video_path = _find_existing_video(row["video_path"])
+
+    if video_path is None:
+        from ml.storage import get_all_segment_metadata
+
+        canonical = next(
+            (
+                item for item in get_all_segment_metadata()
+                if item["segment_id"] == clip_id
+                or Path(item["video_path"]).stem == clip_id
+            ),
+            None,
+        )
+        if canonical:
+            video_path = _find_existing_video(
+                canonical["video_path"], canonical["filename"]
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Video file no longer exists.",
+            )
+
+    if video_path is None:
+        raise HTTPException(status_code=404, detail="Video file no longer exists.")
 
     return FileResponse(
         str(video_path),

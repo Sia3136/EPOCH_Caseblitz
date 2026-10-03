@@ -7,6 +7,16 @@ import cv2
 from .config import THUMB_DIR
 from .db import get_conn
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+def _find_existing_video(path, filename=None):
+    candidates = [Path(path)]
+    if filename:
+        candidates.append(ROOT_DIR / "data" / "videos" / filename)
+        candidates.extend((ROOT_DIR / "data" / "videos").rglob(filename))
+    return next((candidate for candidate in candidates if candidate.exists()), None)
+
 
 def get_thumbnail(clip_id: str, second: int) -> Optional[Path]:
     """Return path to a cached JPG of the frame at `second`, creating it if needed."""
@@ -16,9 +26,25 @@ def get_thumbnail(clip_id: str, second: int) -> Optional[Path]:
     with get_conn() as c:
         row = c.execute("SELECT video_path FROM clips WHERE clip_id=? AND status='ok'",
                         (clip_id,)).fetchone()
-    if not row:
+    video_path = _find_existing_video(row["video_path"]) if row else None
+    if not video_path:
+        from ml.storage import get_all_segment_metadata
+
+        canonical = next(
+            (
+                item for item in get_all_segment_metadata()
+                if item["segment_id"] == clip_id
+                or Path(item["video_path"]).stem == clip_id
+            ),
+            None,
+        )
+        if canonical:
+            video_path = _find_existing_video(
+                canonical["video_path"], canonical["filename"]
+            )
+    if not video_path:
         return None
-    cap = cv2.VideoCapture(row["video_path"])
+    cap = cv2.VideoCapture(video_path)
     try:
         cap.set(cv2.CAP_PROP_POS_MSEC, second * 1000)
         ok, frame = cap.read()

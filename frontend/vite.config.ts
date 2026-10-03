@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
     },
 
     server: {
-      host: "127.0.0.1",
+      host: "0.0.0.0",
       port: 5173,
       // Proxy all backend routes so the browser never makes cross-origin
       // requests — no CORS issues, works with any backend port.
