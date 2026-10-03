@@ -1,86 +1,113 @@
-"""H4/H6 semantic B-roll search with BLIP captions and quality flags."""
+"""FastAPI-facing search adapter."""
 
-from typing import Callable, Dict, List, Tuple
+from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
 
-from .config import RAW_K, TOP_K
-from .db import get_conn
+from .config import TOP_K
+from .ml import search as ml_search
 from .postprocess import postprocess, split_script
-from .schemas import SceneResult, ScriptResponse, SearchResponse, SearchResult
+from .schemas import (
+    SceneResult,
+    ScriptResponse,
+    SearchResponse,
+    SearchResult,
+)
 from .thumbnails import get_thumbnail
 
-try:
-    from ml.captioner import BrollCaptioner
-    CAPTIONER = BrollCaptioner()
-except Exception:
-    CAPTIONER = None
-
-
-SearchFn = Callable[[str, int], List[Tuple[int, float]]]
 
 NO_MATCH_MSG = "No strong match found for this query"
 EMPTY_QUERY_MSG = "Please enter a search query"
 
 
-def _lookup_segments(raw_hits: List[Tuple[int, float]]) -> List[Dict]:
-    if not raw_hits:
-        return []
+def _get_frame(result: dict[str, Any]):
+    """Load the frame associated with an ML result."""
 
-    scores = {pos: score for pos, score in raw_hits}
-    marks = ",".join("?" * len(scores))
-
-    with get_conn() as c:
-        rows = c.execute(
-            f"""
-            SELECT s.faiss_pos, s.clip_id, s.start_time, s.end_time
-            FROM segments s
-            JOIN clips c ON c.clip_id = s.clip_id
-            WHERE c.status = 'ok'
-              AND s.faiss_pos IN ({marks})
-            """,
-            list(scores),
-        ).fetchall()
-
-    return [
-        {
-            "clip_id": r["clip_id"],
-            "start": r["start_time"],
-            "end": r["end_time"],
-            "score": scores[r["faiss_pos"]],
-        }
-        for r in rows
-    ]
-
-
-def _get_frame(h: Dict):
-    """Get the matched frame from the cached thumbnail."""
-    thumbnail = get_thumbnail(
-        h["clip_id"],
-        int(h["start"])
+    thumbnail_path = result.get(
+        "thumbnail_path"
     )
 
-    if not thumbnail:
+    if thumbnail_path:
+
+        path = Path(thumbnail_path)
+
+        if path.exists():
+
+            frame = cv2.imread(
+                str(path)
+            )
+
+            if frame is not None:
+                return frame
+
+    video_path = result.get(
+        "video_path"
+    )
+
+    start = result.get(
+        "start_time",
+        result.get("start", 0),
+    )
+
+    if not video_path:
         return None
 
-    frame = cv2.imread(str(thumbnail))
+    path = Path(video_path)
+
+    if not path.exists():
+        return None
+
+    cap = cv2.VideoCapture(
+        str(path)
+    )
+
+    try:
+
+        cap.set(
+            cv2.CAP_PROP_POS_MSEC,
+            float(start) * 1000,
+        )
+
+        ok, frame = cap.read()
+
+        if not ok:
+
+            cap.set(
+                cv2.CAP_PROP_POS_FRAMES,
+                0,
+            )
+
+            ok, frame = cap.read()
+
+        return frame if ok else None
+
+    finally:
+        cap.release()
+
+
+def _quality_flag(frame):
+    """Return a quality flag for a matched frame."""
 
     if frame is None:
         return None
 
-    return frame
+    gray = cv2.cvtColor(
+        frame,
+        cv2.COLOR_BGR2GRAY,
+    )
 
+    brightness = float(
+        np.mean(gray)
+    )
 
-def _quality_flag(frame) -> str | None:
-    """Return 'blurry', 'dark', or None."""
-    if frame is None:
-        return None
-
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    brightness = float(np.mean(gray))
-    blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    blur_score = float(
+        cv2.Laplacian(
+            gray,
+            cv2.CV_64F,
+        ).var()
+    )
 
     if brightness < 35:
         return "dark"
@@ -91,94 +118,334 @@ def _quality_flag(frame) -> str | None:
     return None
 
 
-def _caption_result(frame) -> str:
-    """Generate a BLIP caption for the matched frame."""
-    if CAPTIONER is None or frame is None:
+def _caption_result(frame):
+    """Generate a BLIP caption when available."""
+
+    if frame is None:
         return ""
 
     try:
+
+        from ml.captioner import BrollCaptioner
         from PIL import Image
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(rgb)
+        rgb = cv2.cvtColor(
+            frame,
+            cv2.COLOR_BGR2RGB,
+        )
 
-        return CAPTIONER.caption(image)
+        image = Image.fromarray(
+            rgb
+        )
+
+        captioner = BrollCaptioner()
+
+        return captioner.caption(
+            image
+        )
 
     except Exception:
         return ""
 
 
-def _to_result(h: Dict) -> SearchResult:
-    frame = _get_frame(h)
+def _similarity_to_percent(
+    similarity: float,
+):
+    """
+    Convert similarity to a display percentage.
 
-    caption = _caption_result(frame)
-    quality_flag = _quality_flag(frame)
+    CLIP similarity is expected to be in the
+    approximate 0-1 range here.
+    """
+
+    value = float(
+        similarity
+    )
+
+    value = max(
+        0.0,
+        min(1.0, value),
+    )
+
+    return int(
+        round(value * 100)
+    )
+
+
+def _video_id(
+    result: dict[str, Any],
+):
+    """Return a stable video identifier."""
+
+    video_id = result.get(
+        "video_id"
+    )
+
+    if video_id:
+        return str(video_id)
+
+    clip_id = result.get(
+        "clip_id"
+    )
+
+    if clip_id:
+        return str(clip_id)
+
+    filename = result.get(
+        "filename"
+    )
+
+    if filename:
+        return Path(
+            filename
+        ).stem
+
+    video_path = result.get(
+        "video_path"
+    )
+
+    if video_path:
+        return Path(
+            video_path
+        ).stem
+
+    return ""
+
+
+def _to_postprocess_result(
+    result: dict[str, Any],
+):
+    """
+    Convert an ML result into the generic structure
+    expected by postprocess.py.
+    """
+
+    return {
+        "clip_id": _video_id(result),
+        "start": float(
+            result.get(
+                "start_time",
+                result.get("start", 0),
+            )
+        ),
+        "end": float(
+            result.get(
+                "end_time",
+                result.get("end", 0),
+            )
+        ),
+        "score": float(
+            result.get(
+                "similarity",
+                result.get("score", 0.0),
+            )
+        ),
+        "_raw": result,
+    }
+
+
+def _to_result(
+    result: dict[str, Any],
+):
+    """Convert an ML result into SearchResult."""
+
+    clip_id = _video_id(
+        result
+    )
+
+    start = float(
+        result.get(
+            "start_time",
+            result.get("start", 0),
+        )
+    )
+
+    end = float(
+        result.get(
+            "end_time",
+            result.get("end", start),
+        )
+    )
+
+    similarity = float(
+        result.get(
+            "similarity",
+            result.get("score", 0.0),
+        )
+    )
+
+    frame = _get_frame(
+        result
+    )
+
+    thumbnail_url = (
+        f"/thumbnails/"
+        f"{clip_id}_{int(start)}.jpg"
+    )
+
+    video_url = (
+        f"/videos/{clip_id}"
+    )
 
     return SearchResult(
-        clip_id=h["clip_id"],
-        start=h["start"],
-        end=h["end"],
-        percent=h["percent"],
-        caption=caption,
-        thumbnail_url=f"/thumbnails/{h['clip_id']}_{int(h['start'])}.jpg",
-        video_url=f"/videos/{h['clip_id']}",
-        quality_flag=quality_flag,
+        clip_id=clip_id,
+        start=start,
+        end=end,
+        percent=_similarity_to_percent(
+            similarity
+        ),
+        caption=_caption_result(
+            frame
+        ),
+        thumbnail_url=thumbnail_url,
+        video_url=video_url,
+        quality_flag=_quality_flag(
+            frame
+        ),
     )
 
 
 def search_clips(
-    query: str,
-    search_fn: SearchFn,
-    k: int = TOP_K
-) -> SearchResponse:
+    query,
+    search_fn=None,
+    k=TOP_K,
+):
+    """
+    Search the ML index and return the FastAPI response.
+    """
 
-    query = (query or "").strip()
+    query = (
+        query or ""
+    ).strip()
 
     if not query:
         return SearchResponse(
             query=query,
             results=[],
-            message=EMPTY_QUERY_MSG
+            message=EMPTY_QUERY_MSG,
         )
 
-    hits = _lookup_segments(search_fn(query, RAW_K))
+    try:
 
-    processed = postprocess(hits, k=k)
+        if search_fn is None:
+            search_fn = ml_search
 
-    results = [
-        _to_result(h)
-        for h in processed
+        raw_results = search_fn(
+            query,
+            k,
+        )
+
+    except FileNotFoundError:
+        raw_results = []
+
+    except Exception as error:
+        raise RuntimeError(
+            f"B-roll ML search failed: {error}"
+        ) from error
+
+    prepared = [
+        _to_postprocess_result(
+            result
+        )
+        for result in raw_results
     ]
+
+    processed = postprocess(
+        prepared,
+        k=k,
+    )
+
+    converted = []
+
+    for processed_result in processed:
+
+        raw_result = processed_result.get(
+            "_raw"
+        )
+
+        if raw_result is None:
+            raw_result = {
+                "video_id": processed_result[
+                    "clip_id"
+                ],
+                "clip_id": processed_result[
+                    "clip_id"
+                ],
+                "start_time": processed_result[
+                    "start"
+                ],
+                "end_time": processed_result[
+                    "end"
+                ],
+                "similarity": processed_result[
+                    "score"
+                ],
+            }
+
+        converted.append(
+            _to_result(
+                raw_result
+            )
+        )
 
     return SearchResponse(
         query=query,
-        results=results,
-        message=None if results else NO_MATCH_MSG
+        results=converted,
+        message=(
+            None
+            if converted
+            else NO_MATCH_MSG
+        ),
     )
 
 
 def search_script(
-    text: str,
-    search_fn: SearchFn,
-    k: int = TOP_K
-) -> ScriptResponse:
+    text,
+    search_fn=None,
+    k=TOP_K,
+):
+    """Search the ML index for every sentence in a script."""
 
-    sentences, truncated = split_script(text)
+    sentences, truncated = split_script(
+        text
+    )
 
-    scenes = [
-        SceneResult(
-            scene_index=i,
-            sentence=s,
-            results=search_clips(
-                s,
-                search_fn,
-                k
-            ).results
+    scenes = []
+
+    for index, sentence in enumerate(
+        sentences,
+        start=1,
+    ):
+
+        response = search_clips(
+            sentence,
+            search_fn=search_fn,
+            k=k,
         )
-        for i, s in enumerate(sentences)
-    ]
+
+        scenes.append(
+            SceneResult(
+                scene_index=index,
+                sentence=sentence,
+                results=response.results,
+            )
+        )
 
     return ScriptResponse(
         scenes=scenes,
-        truncated=truncated
+        truncated=truncated,
     )
+
+
+class BrollSearch:
+    """Compatibility wrapper for existing callers."""
+
+    def search(
+        self,
+        query,
+        top_k=TOP_K,
+    ):
+        return ml_search(
+            query,
+            top_k,
+        )
