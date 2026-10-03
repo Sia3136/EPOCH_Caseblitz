@@ -1,7 +1,6 @@
 """CLIP model loading and embedding helpers."""
 import torch
 import open_clip
-import numpy as np
 from PIL import Image
 
 class CLIPModel:
@@ -29,7 +28,7 @@ class CLIPModel:
         return embedding.cpu().numpy().astype("float32")[0]
 
     @torch.inference_mode()
-    def encode_image_batch(self, images, batch_size=32):
+    def encode_image_batch(self, images):
         processed = []
         for image in images:
             if not isinstance(image, Image.Image):
@@ -39,13 +38,10 @@ class CLIPModel:
         if not processed:
             return []
 
-        batches = []
-        for start in range(0, len(processed), batch_size):
-            batch = torch.stack(processed[start:start + batch_size]).to(self.device)
-            embeddings = self.model.encode_image(batch)
-            embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
-            batches.append(embeddings.cpu().numpy().astype("float32"))
-        return np.concatenate(batches, axis=0)
+        batch = torch.stack(processed).to(self.device)
+        embeddings = self.model.encode_image(batch)
+        embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
+        return embeddings.cpu().numpy().astype("float32")
 
     @torch.inference_mode()
     def encode_text(self, text):

@@ -14,23 +14,30 @@ const images = ['https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=
 export default function App() {
   const [view, setView] = useState('home');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState(clips);
-  const [selected, setSelected] = useState(clips[0]);
+  const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [script, setScript] = useState(sampleScript);
   const [scenes, setScenes] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [library, setLibrary] = useState(null);
 
   function navigate(next) { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  function play(clip) { window.alert(`Preview would start at ${clip.time.split('–')[0]} in ${clip.file}.`); }
+  function play(clip) { setSelected(clip); }
+  function handleLibraryComplete(stats) {
+    setLibrary(stats);
+    setResults([]);
+    setSelected(null);
+    navigate('results');
+  }
   async function runSearch(event) { event?.preventDefault(); const nextQuery = query.trim() || 'person walking alone at night'; setBusy(true); setError(''); try { const response = await searchClips(nextQuery); setResults(response.results); setSelected(response.results[0] || null); navigate('results'); if (response.message) setError(response.message); } catch (requestError) { setError(requestError.message); } finally { setBusy(false); } }
   async function runScript() { setBusy(true); setError(''); try { setScenes(await searchScript(script)); } catch (requestError) { setError(requestError.message); } finally { setBusy(false); } }
   return <div className="shell">{view === 'home' && <Navbar view={view} onNavigate={navigate} />}
     {error && <div className="error-banner" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     {view === 'home' && <LandingPage onUpload={() => navigate('upload')} />}
-    {view === 'results' && <WorkspaceShell active="search" onNavigate={navigate}><Results query={query || 'person walking alone at night'} results={results} selected={selected} setSelected={setSelected} onPlay={play} busy={busy} onNew={() => navigate('home')} /></WorkspaceShell>}
-    {view === 'script' && <WorkspaceShell active="script" onNavigate={navigate}><ScriptMode script={script} setScript={setScript} scenes={scenes} onRun={runScript} onPlay={play} busy={busy} /></WorkspaceShell>}
-    {view === 'upload' && <UploadPanel />}
+    {view === 'results' && <WorkspaceShell active="search" library={library} onNavigate={navigate}><Results query={query || ''} results={results} selected={selected} setSelected={setSelected} onPlay={play} busy={busy} onNew={() => navigate('home')} /></WorkspaceShell>}
+    {view === 'script' && <WorkspaceShell active="script" library={library} onNavigate={navigate}><ScriptMode script={script} setScript={setScript} scenes={scenes} onRun={runScript} onPlay={play} busy={busy} /></WorkspaceShell>}
+    {view === 'upload' && <UploadPanel onComplete={handleLibraryComplete} />}
   </div>;
 }
 

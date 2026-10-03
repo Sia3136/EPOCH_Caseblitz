@@ -14,8 +14,8 @@ def temporal_iou(left_start, left_end, right_start, right_end):
     return intersection / union if union > 0 else 0.0
 
 
-def evaluate_query(query, expected, search_function, k=5, threshold=0.0):
-    results = search_function(query, top_k=k, threshold=threshold)
+def evaluate_query(query, expected, search_function, k=5):
+    results = search_function(query, top_k=k, threshold=0.0)
     expected_video = expected["video_id"]
     expected_start = float(expected.get("start_time", 0))
     expected_end = float(expected.get("end_time", 0))
@@ -75,48 +75,3 @@ def evaluate_csv(path, search_function, k=5):
         "mrr": sum(item["mrr"] for item in metrics) / len(metrics),
         "temporal_iou": sum(item["temporal_iou"] for item in metrics) / len(metrics),
     }
-
-
-def calibrate_threshold(rows, search_function, thresholds=None, k=5):
-    """Select the threshold with the highest labeled Recall@k."""
-    candidates = thresholds or [round(index / 100, 2) for index in range(0, 101, 5)]
-    if not rows:
-        return {"threshold": 0.0, "recall_at_k": 0.0}
-
-    scored = []
-    for threshold in candidates:
-        metrics = []
-        for row in rows:
-            metrics.append(
-                evaluate_query(
-                    row["query"], row, search_function, k=k, threshold=threshold
-                )
-            )
-        scored.append((sum(item["recall_at_k"] for item in metrics) / len(metrics), threshold))
-
-    recall, threshold = max(scored, key=lambda item: (item[0], -item[1]))
-    return {"threshold": threshold, "recall_at_k": recall}
-
-
-def evaluate_configurations(rows, build_index, search_function, configurations, k=5):
-    """Evaluate labeled retrieval for multiple sampling/segment configurations."""
-    reports = []
-    for configuration in configurations:
-        build_index(**configuration)
-        metrics = [
-            evaluate_query(row["query"], row, search_function, k=k)
-            for row in rows
-        ]
-        count = len(metrics)
-        reports.append({
-            **configuration,
-            "count": count,
-            "recall_at_k": sum(item["recall_at_k"] for item in metrics) / count
-            if count else 0.0,
-            "precision_at_k": sum(item["precision_at_k"] for item in metrics) / count
-            if count else 0.0,
-            "mrr": sum(item["mrr"] for item in metrics) / count if count else 0.0,
-            "temporal_iou": sum(item["temporal_iou"] for item in metrics) / count
-            if count else 0.0,
-        })
-    return reports
