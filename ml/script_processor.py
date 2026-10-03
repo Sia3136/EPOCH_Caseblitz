@@ -2,8 +2,14 @@
 import re
 
 from ml.ranking import rank_results
+<<<<<<< HEAD:ml/script_processor.py
+=======
+from ml.search import MAX_QUERY_WORDS
+>>>>>>> ad90036975843f7a0a0227c7eac73665014d470b:broll-ml/ml/script_processor.py
 
 def split_script(script, max_sentences=20):
+    if len((script or "").split()) > MAX_QUERY_WORDS:
+        raise ValueError("Narration input cannot exceed 500 words")
     sentences = re.split(r'(?<=[.!?])\s+', script.strip())
 
     sentences = [
