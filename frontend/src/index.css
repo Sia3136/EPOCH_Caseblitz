@@ -26,6 +26,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 /* ── Shell ───────────────────────────────────────────────── */
 .app-shell { min-height: 100vh; overflow: hidden; background: radial-gradient(circle at 73% 20%, rgba(199,255,58,.07), transparent 23%), var(--ink); }
 .noise { position: fixed; inset: 0; opacity: .035; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E"); }
+.landing-hero, .ba-section, .landing-hero ~ section { position: relative; z-index: 1; }
 
 /* ── Navbar ──────────────────────────────────────────────── */
 .topbar { height: 76px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 4vw; position: relative; z-index: 5; }
