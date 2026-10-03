@@ -58,6 +58,8 @@ export interface UploadResponse {
   job_id: string;
   clips_indexed: number;
   segments_indexed: number;
+  clips?: number;
+  segments?: number;
   skipped: string[];
 }
 
@@ -191,7 +193,11 @@ export async function uploadLibrary(
     const data = await request<UploadResponse>("/upload", { method: "POST", body: formData });
     stopPolling();
     onProgress(100);
-    return data;
+    return {
+      ...data,
+      clips: data.clips ?? data.clips_indexed,
+      segments: data.segments ?? data.segments_indexed,
+    };
   } catch (err) {
     stopPolling();
     throw err;
