@@ -1,0 +1,10 @@
+numpy
+opencv-python-headless
+Pillow
+torch
+open_clip_torch
+faiss-cpu
+transformers
+streamlit
+pytest
+kaggle
