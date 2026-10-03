@@ -4,6 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
+
+import numpy as np
 from zipfile import ZipFile
 
 from app import extract_video_zip, validate_videos
@@ -18,6 +20,7 @@ from ml.script_processor import search_script
 from ml.segment_builder import build_segments
 from ml.reranking import frame_level_rerank
 from ml.search import validate_query
+from ml.search import _extract_activity, search_videos
 
 
 class PipelineTests(TestCase):
@@ -123,6 +126,53 @@ class PipelineTests(TestCase):
     def test_script_input_is_limited_to_500_words(self):
         with self.assertRaises(ValueError):
             search_script("word " * 501, lambda sentence: [])
+
+    def test_activity_query_prefers_action_over_shared_subject(self):
+        class FakeIndex:
+            ntotal = 2
+
+            def search(self, vector, count):
+                if vector[0][0] > 0.9:
+                    return (
+                        np.array([[0.42, 0.08]], dtype=np.float32),
+                        np.array([[1, 0]], dtype=np.int64),
+                    )
+                return (
+                    np.array([[0.80, 0.78]], dtype=np.float32),
+                    np.array([[0, 1]], dtype=np.int64),
+                )
+
+        metadata = [
+            {
+                "faiss_id": 0,
+                "video_path": "walking.mp4",
+                "filename": "walking.mp4",
+                "start_time": 0.0,
+                "end_time": 2.0,
+            },
+            {
+                "faiss_id": 1,
+                "video_path": "painting.mp4",
+                "filename": "painting.mp4",
+                "start_time": 0.0,
+                "end_time": 2.0,
+            },
+        ]
+
+        def encode(text, model=None):
+            return np.array([1.0, 0.0] if text == "painting" else [0.8, 0.2])
+
+        self.assertEqual(_extract_activity("a girl is doing painting"), "painting")
+        with patch("ml.search.load_index", return_value=FakeIndex()), patch(
+            "ml.search.get_all_segment_metadata", return_value=metadata
+        ), patch("ml.search.encode_search_text", side_effect=encode):
+            results = search_videos(
+                "a girl is doing painting",
+                top_k=2,
+                rerank_frames=False,
+                use_captions=False,
+            )
+        self.assertEqual(results[0]["filename"], "painting.mp4")
 
     def test_evaluation_uses_video_id_and_temporal_overlap(self):
         def search(query, top_k=5, threshold=0.0):

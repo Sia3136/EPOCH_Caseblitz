@@ -26,6 +26,19 @@ def _query_concepts(query):
     ]
 
 
+def _extract_activity(query):
+    """Extract the action constraint from phrases such as ``is painting``."""
+    match = re.search(
+        r"\b(?:is|are|was|were)\s+(?:doing\s+)?(.+)$",
+        query,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    activity = re.sub(r"[.!?,]+$", "", match.group(1)).strip()
+    return activity or None
+
+
 def search_videos(
     query,
     top_k=5,
@@ -58,13 +71,30 @@ def search_videos(
     results = []
     counts = {}
     concepts = _query_concepts(query)
-    allow_multiple_candidates = len(concepts) > 1
+    activity = _extract_activity(query)
+    activity_scores = None
+    activity_query = activity or query
+    activity_mode = activity is not None and len(concepts) == 1
+    allow_multiple_candidates = len(concepts) > 1 and not activity_mode
+
+    if activity_mode:
+        activity_vector = encode_search_text(activity, model=model)
+        activity_values, activity_ids = index.search(
+            activity_vector.reshape(1, -1), index.ntotal
+        )
+        activity_scores = {
+            int(faiss_id): float(score)
+            for score, faiss_id in zip(activity_values[0], activity_ids[0])
+            if faiss_id >= 0
+        }
 
     if not allow_multiple_candidates:
         candidate_scores = {
             int(faiss_id): float(score)
             for score, faiss_id in zip(scores[0], ids[0])
-            if faiss_id >= 0 and float(score) >= threshold
+            if faiss_id >= 0 and (
+                activity_mode or float(score) >= threshold
+            )
         }
     else:
         # Compound queries need candidates from each concept. Filtering only
@@ -97,7 +127,11 @@ def search_videos(
         if row is None:
             continue
         video_key = row["video_path"]
-        if not allow_multiple_candidates and counts.get(video_key, 0) >= max_per_video:
+        if (
+            not allow_multiple_candidates
+            and not activity_mode
+            and counts.get(video_key, 0) >= max_per_video
+        ):
             continue
         results.append({
             **row,
@@ -109,8 +143,41 @@ def search_videos(
             ),
         })
         counts[video_key] = counts.get(video_key, 0) + 1
-        if len(results) >= top_k and not allow_multiple_candidates:
+        if len(results) >= top_k and not allow_multiple_candidates and not activity_mode:
             break
+
+    if activity_mode and results:
+        activity_results = []
+        for result in results:
+            activity_score = activity_scores.get(int(result["faiss_id"]), 0.0)
+            if activity_score < threshold:
+                continue
+            result["activity_similarity"] = activity_score
+            result["similarity"] = (
+                0.4 * result["similarity"] + 0.6 * activity_score
+            )
+            result["confidence_score"] = similarity_to_percentage(
+                result["similarity"]
+            )
+            result["matched_concept"] = activity_query
+            result["explanation"] = (
+                f"Ranked using the activity constraint: {activity_query}."
+            )
+            activity_results.append(result)
+        results = []
+        counts = {}
+        for result in sorted(
+            activity_results,
+            key=lambda item: item["similarity"],
+            reverse=True,
+        ):
+            video_key = result["video_path"]
+            if counts.get(video_key, 0) >= max_per_video:
+                continue
+            results.append(result)
+            counts[video_key] = counts.get(video_key, 0) + 1
+            if len(results) >= top_k:
+                break
 
     if allow_multiple_candidates and results:
         for result in results:
