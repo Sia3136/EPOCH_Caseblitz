@@ -6,8 +6,7 @@ from zipfile import ZipFile
 
 from ml.indexing import index_video, unique_video_paths
 from ml.ranking import similarity_to_percentage
-from ml.search import search_videos
-from ml.search import MAX_QUERY_WORDS
+from ml.search import MAX_QUERY_WORDS, search_videos
 from ml.script_processor import search_script
 from ml.video_processor import SUPPORTED_VIDEO_EXTENSIONS
 from ml.video_processor import MAX_VIDEO_DURATION
@@ -147,41 +146,36 @@ def main():
     if not INDEX_PATH.exists():
         st.info("Upload and index a video library to begin searching.")
 
-    mode = st.radio("Search mode", ["Text Search", "Script Search"], horizontal=True)
-    threshold = st.slider("Minimum similarity", 0.0, 1.0, 0.20, 0.01)
-
-    if mode == "Text Search":
-        query = st.text_input(
-            "Describe the footage you're looking for",
-            placeholder="A person walking through a busy city",
-        )
-        st.caption(f"Maximum input: {MAX_QUERY_WORDS} words")
-        if st.button("Search", type="primary") and query.strip():
-            results = search_videos(query, threshold=threshold)
-            if results:
-                for result in results:
-                    render_result(result, st)
+    query = st.text_area(
+        "Search your video library",
+        placeholder=(
+            "Describe footage or paste narration, for example: "
+            "A person walking through a busy city."
+        ),
+    )
+    st.caption(f"Maximum input: {MAX_QUERY_WORDS} words")
+    if st.button("Search", type="primary") and query.strip():
+        try:
+            # One input supports both a short request and multi-sentence narration.
+            script_results = search_script(query, search_videos)
+            if len(script_results["scenes"]) > 1:
+                for scene in script_results["scenes"]:
+                    st.markdown(
+                        f"**Scene {scene['scene_index']}:** {scene['sentence']}"
+                    )
+                    if not scene["results"]:
+                        st.info("No relevant footage found for this sentence.")
+                    for result in scene["results"]:
+                        render_result(result, st)
             else:
-                st.warning("No relevant footage found. Try another description.")
-    else:
-        script = st.text_area(
-            "Paste your narration or script",
-            placeholder="The city wakes up as people begin their morning commute.",
-        )
-        st.caption(f"Maximum input: {MAX_QUERY_WORDS} words")
-        if st.button("Search script", type="primary") and script.strip():
-            scenes = search_script(
-                script,
-                lambda sentence: search_videos(
-                    sentence, threshold=threshold
-                ),
-            )
-            for scene in scenes["scenes"]:
-                st.markdown(f"**Scene {scene['scene_index']}:** {scene['sentence']}")
-                if not scene["results"]:
-                    st.info("No relevant footage found for this sentence.")
-                for result in scene["results"]:
-                    render_result(result, st)
+                results = search_videos(query)
+                if results:
+                    for result in results:
+                        render_result(result, st)
+                else:
+                    st.warning("No relevant footage found. Try another description.")
+        except ValueError as error:
+            st.error(str(error))
 
 
 if __name__ == "__main__":

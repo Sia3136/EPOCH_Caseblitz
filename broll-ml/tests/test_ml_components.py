@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 import numpy as np
+import cv2
 
 from ml.indexing import unique_video_paths
 from ml.segment_builder import build_segments
@@ -39,6 +40,9 @@ class ComponentTests(TestCase):
         self.assertIn("low_contrast", quality["issues"])
 
     def test_quality_analysis_flags_blurry_frame(self):
-        frame = np.full((32, 32, 3), 128, dtype=np.uint8)
+        sharp = np.zeros((64, 64), dtype=np.uint8)
+        sharp[:, 32:] = 255
+        blurred = cv2.GaussianBlur(sharp, (15, 15), 0)
+        frame = np.repeat(blurred[:, :, None], 3, axis=2)
         quality = assess_frame_quality(frame)
         self.assertIn("blurry", quality["issues"])

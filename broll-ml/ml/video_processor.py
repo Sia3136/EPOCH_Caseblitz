@@ -15,8 +15,15 @@ def assess_frame_quality(frame, blur_threshold=35.0):
     blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     brightness = float(gray.mean())
     contrast = float(gray.std())
+    edge_density = float((cv2.Canny(gray, 50, 150) > 0).mean())
     issues = []
-    if blur_score < blur_threshold:
+    # Flat or dark frames have low Laplacian variance by definition. Only
+    # call a frame blurry when it has enough visible contrast to support it.
+    if (
+        contrast >= 12
+        and edge_density < 0.03
+        and blur_score < blur_threshold
+    ):
         issues.append("blurry")
     if brightness < 35:
         issues.append("too_dark")
@@ -28,6 +35,7 @@ def assess_frame_quality(frame, blur_threshold=35.0):
         "blur_score": blur_score,
         "brightness": brightness,
         "contrast": contrast,
+        "edge_density": edge_density,
         "issues": issues,
     }
 
