@@ -192,3 +192,129 @@ footer > span { font: 400 8px "DM Mono"; text-transform: uppercase; letter-spaci
   footer p { margin: 0; }
   .library-modal { padding: 52px 25px 40px; }
 }
+
+/* ── Error banner ─────────────────────────────────────────── */
+.error-banner{background:#e0525218;border-bottom:1px solid #e05252;padding:10px 4vw;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.error-banner button{border:0;background:transparent;color:var(--muted);cursor:pointer}
+
+/* ── Trust bar ────────────────────────────────────────────── */
+.trust-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin-top:38px;margin-bottom:0;border:1px solid var(--line);width:fit-content;padding:0}
+.trust-item{font:500 9px "DM Mono";text-transform:uppercase;letter-spacing:.14em;color:var(--muted);padding:9px 18px;white-space:nowrap;position:relative}
+.trust-sep{margin:0 0 0 -18px;padding:9px 0 9px 18px;color:#36382f}
+.trust-item:first-child{color:var(--paper)}
+
+/* ── Before / After ───────────────────────────────────────── */
+.ba-section{padding:72px 4vw 64px;border-top:1px solid var(--line)}
+.ba-label-row{margin-bottom:32px}
+.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-width:1000px}
+.ba-card{padding:32px 32px 28px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:22px}
+.ba-after{border-color:rgba(199,255,58,.28);background:rgba(199,255,58,.04)}
+.ba-card-header{margin-bottom:-6px}
+.ba-pill{font:500 8px "DM Mono";text-transform:uppercase;letter-spacing:.14em;padding:5px 10px;border:1px solid var(--line)}
+.ba-pill--before{color:var(--muted);border-color:var(--line)}
+.ba-pill--after{color:var(--acid);border-color:rgba(199,255,58,.4);display:inline-flex;align-items:center;gap:7px}
+.ba-dot{width:5px;height:5px;border-radius:50%;background:var(--acid);box-shadow:0 0 6px var(--acid);animation:pulse 2s infinite}
+.ba-query-label,.ba-files-label{font:500 8px "DM Mono";text-transform:uppercase;letter-spacing:.12em;color:var(--muted);display:block;margin-bottom:8px}
+.ba-query-text{font:500 clamp(15px,1.6vw,20px)/1.4 "Syne";letter-spacing:-.03em;color:var(--paper);margin:0}
+.ba-files{display:flex;flex-direction:column;gap:6px}
+.ba-file-row{display:flex;align-items:center;gap:10px;font:400 11px "DM Mono";color:#5a5d56}
+.ba-file-icon{color:#3a3d37}
+.ba-result{display:flex;align-items:center;gap:8px;font:500 10px "DM Mono";text-transform:uppercase;letter-spacing:.1em;padding:10px 14px;border:1px solid;width:fit-content}
+.ba-result--bad{border-color:#e0525240;color:#e05252;background:#e0525210}
+.ba-result--good{border-color:rgba(199,255,58,.4);color:var(--acid);background:rgba(199,255,58,.07)}
+.ba-match-card{background:rgba(0,0,0,.35);border:1px solid rgba(199,255,58,.18);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.ba-match-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ba-match-file{font:500 11px "DM Mono";color:var(--paper)}
+.ba-match-score{font:700 11px "DM Mono";color:var(--acid)}
+.ba-match-ts{display:flex;align-items:center;gap:7px;font:400 9px "DM Mono";color:var(--muted)}
+.ba-match-caption{font:400 12px "Manrope";color:#8a8d84;margin:0;font-style:italic}
+
+/* ── How It Works ─────────────────────────────────────────── */
+.how-section{padding:72px 4vw 80px;border-top:1px solid var(--line)}
+.how-header{margin-bottom:52px}
+.how-title{font:600 clamp(32px,4vw,58px)/.9 "Syne";letter-spacing:-.06em;margin:16px 0 0}
+.how-title span{color:var(--acid);font-style:italic;font-weight:500}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.how-step{border:1px solid var(--line);background:var(--panel);padding:34px 28px 30px;display:flex;flex-direction:column;gap:14px;position:relative}
+.how-step:first-child{border-color:rgba(199,255,58,.25)}
+.how-step-top{display:flex;justify-content:space-between;align-items:center}
+.how-num{font:500 9px "DM Mono";color:var(--acid);letter-spacing:.12em}
+.how-sparkle{color:var(--acid);font-size:14px;opacity:.7}
+.how-icon-wrap{width:42px;height:42px;border:1px solid var(--line);display:grid;place-items:center;color:var(--acid)}
+.how-step-title{font:600 16px "Syne";letter-spacing:-.03em;margin:0}
+.how-step-body{font-size:13px;line-height:1.7;color:var(--muted);margin:0;flex:1}
+.how-status{display:flex;align-items:center;gap:8px;font:400 8px "DM Mono";text-transform:uppercase;letter-spacing:.12em;color:#5a5d56}
+.how-status-dot{width:5px;height:5px;border-radius:50%;background:var(--acid);opacity:.6}
+.how-cta{height:40px;border:1px solid rgba(199,255,58,.4);background:transparent;color:var(--acid);padding:0 16px;display:flex;align-items:center;gap:10px;font:600 11px "DM Mono";letter-spacing:.06em;cursor:pointer;transition:.2s;width:fit-content}
+.how-cta:hover{background:var(--acid);color:var(--ink)}
+
+/* ── Script counter ───────────────────────────────────────── */
+.composer-counter{font:500 9px "DM Mono";text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.composer-counter.warn{color:#f0c040}
+
+/* ── Script truncation banner ─────────────────────────────── */
+.truncation-banner{background:#f0c04014;border-top:1px solid #f0c04040;border-bottom:1px solid #f0c04040;padding:10px 4vw;display:flex;align-items:center;gap:10px;font:400 12px "DM Mono";color:#f0c040;position:relative}
+.truncation-banner button{margin-left:auto;border:0;background:transparent;color:#f0c040;cursor:pointer;opacity:.7}
+.truncation-banner button:hover{opacity:1}
+
+/* ── Quality filter ───────────────────────────────────────── */
+.result-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.quality-filter{display:flex;align-items:center;gap:6px;border:1px solid var(--line);padding:6px 10px}
+.quality-filter-label{font:400 8px "DM Mono";text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:flex;align-items:center;gap:5px}
+.qf-btn{height:26px;padding:0 10px;border:1px solid var(--line);background:transparent;color:var(--muted);font:500 8px "DM Mono";text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:.2s}
+.qf-btn:hover{border-color:var(--acid);color:var(--acid)}
+.qf-btn--active{background:rgba(199,255,58,.12);border-color:rgba(199,255,58,.5);color:var(--acid)}
+
+/* ── Per-scene re-search button ───────────────────────────── */
+.rescan-btn{height:34px;padding:0 14px;border:1px solid var(--line);background:transparent;color:var(--muted);font:500 9px "DM Mono";text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:7px;cursor:pointer;transition:.2s}
+.rescan-btn:hover:not(:disabled){border-color:var(--acid);color:var(--acid)}
+.rescan-btn:disabled{opacity:.4;cursor:wait}
+
+/* ── Quality badge on card ────────────────────────────────── */
+.quality-badge{position:absolute;left:14px;top:14px;background:#e05252;color:#fff;font:500 7px "DM Mono";text-transform:uppercase;letter-spacing:.1em;padding:3px 7px}
+
+/* ── Video modal ──────────────────────────────────────────── */
+.video-modal{position:relative;width:min(860px,100%);background:#0a0b0a;border:1px solid var(--line);overflow:hidden}
+.video-modal-close{position:absolute;top:10px;right:12px;z-index:2;border:0;background:#0008;color:#fff;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.video-modal-close:hover{background:var(--acid);color:var(--ink)}
+.video-modal-player{display:block;width:100%;max-height:72vh;background:#000}
+.video-modal-meta{padding:14px 20px;display:flex;flex-direction:column;gap:4px}
+.video-modal-title{font:600 14px "Syne"}
+.video-modal-caption{color:var(--muted);font-size:12px;margin:0}
+
+/* ── Upload modal internals ───────────────────────────────── */
+.upload-error{color:#e05252;font-size:12px;margin-top:14px}
+.upload-progress-wrap{text-align:left;padding:8px 0}
+.upload-progress-kicker{font:500 9px "DM Mono";text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:18px}
+.upload-bar-track{height:2px;background:#36382f;margin-bottom:20px}
+.upload-bar-fill{height:100%;background:var(--acid);transition:width .3s}
+.upload-stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.upload-stage{font:400 8px "DM Mono";color:var(--muted)}
+.upload-stage.active{color:var(--paper)}
+.upload-stage.done{color:var(--acid)}
+.upload-stage-num{margin-bottom:4px;font-size:9px}
+.upload-status-text{font:400 10px "DM Mono";color:var(--muted);margin:0 0 4px}
+.upload-clip-name{font:400 9px "DM Mono";color:#5a5d56;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-done-msg{color:var(--acid);font:600 15px "Syne";margin:16px 0 0}
+.upload-skipped{margin-top:10px;font-size:11px;color:var(--muted)}
+.upload-skipped summary{cursor:pointer}
+.upload-skipped ul{margin-top:6px;padding-left:18px}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.empty-state{color:var(--muted);font:400 11px "DM Mono";padding:40px 0;text-align:center;border-top:1px solid var(--line)}
+
+/* ── Responsive additions ─────────────────────────────────── */
+@media (max-width:980px){
+  .ba-grid{grid-template-columns:1fr}
+  .how-grid{grid-template-columns:1fr 1fr}
+  .how-step:last-child{grid-column:1/-1}
+  .result-header{grid-template-columns:1fr}
+  .result-controls{margin-top:12px}
+}
+@media (max-width:700px){
+  .ba-section,.how-section{padding:48px 4vw}
+  .ba-card{padding:24px 20px 20px}
+  .how-grid{grid-template-columns:1fr}
+  .trust-bar{flex-wrap:wrap}
+  .result-controls{flex-direction:column;align-items:flex-start}
+}

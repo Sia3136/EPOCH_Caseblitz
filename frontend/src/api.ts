@@ -136,28 +136,28 @@ export async function searchClips(query: string): Promise<{
   };
 }
 
-export async function searchScript(text: string): Promise<
-  Array<{
-    scene_index: number;
-    sentence: string;
-    results: NormalisedResult[];
-  }>
-> {
+export async function searchScript(text: string): Promise<{
+  scenes: Array<{ scene_index: number; sentence: string; results: NormalisedResult[] }>;
+  truncated: boolean;
+}> {
   const data = await request<ScriptResponse>("/script", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
-  return data.scenes.map((s) => ({
-    scene_index: s.scene_index,
-    sentence: s.sentence,
-    results: s.results.map(normalise),
-  }));
+  return {
+    truncated: data.truncated,
+    scenes: data.scenes.map((s) => ({
+      scene_index: s.scene_index,
+      sentence: s.sentence,
+      results: s.results.map(normalise),
+    })),
+  };
 }
 
 export async function uploadLibrary(
   file: File,
-  onProgress: (pct: number) => void,
+  onProgress: (pct: number, currentClip?: string) => void,
 ): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
@@ -169,9 +169,9 @@ export async function uploadLibrary(
       try {
         const s = await getStatus();
         if (s.total > 0) {
-          // Map processed/total → 10–90 % range
           const pct = Math.round(10 + (s.processed / s.total) * 80);
-          onProgress(Math.min(pct, 90));
+          // job_id doubles as the "current clip" identifier from the backend
+          onProgress(Math.min(pct, 90), s.job_id ?? undefined);
         }
         if (s.status === "done") stopPolling();
       } catch {
@@ -181,20 +181,14 @@ export async function uploadLibrary(
   }
 
   function stopPolling() {
-    if (pollHandle !== null) {
-      clearInterval(pollHandle);
-      pollHandle = null;
-    }
+    if (pollHandle !== null) { clearInterval(pollHandle); pollHandle = null; }
   }
 
   onProgress(5);
   startPolling();
 
   try {
-    const data = await request<UploadResponse>("/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const data = await request<UploadResponse>("/upload", { method: "POST", body: formData });
     stopPolling();
     onProgress(100);
     return data;
