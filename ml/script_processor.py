@@ -1,11 +1,8 @@
-﻿"""Script parsing and query preparation utilities."""
+"""Script parsing and query preparation utilities."""
 import re
 
 from ml.ranking import rank_results
-<<<<<<< HEAD:ml/script_processor.py
-=======
 from ml.search import MAX_QUERY_WORDS
->>>>>>> ad90036975843f7a0a0227c7eac73665014d470b:broll-ml/ml/script_processor.py
 
 def split_script(script, max_sentences=20):
     if len((script or "").split()) > MAX_QUERY_WORDS:

@@ -1,7 +1,24 @@
 ﻿"""Saved-index semantic search for text and scripts."""
+import re
 from ml.embedding import encode_search_text
 from ml.ranking import rank_results
 from ml.storage import get_all_segment_metadata, load_index
+
+MAX_QUERY_WORDS = 500
+
+
+def validate_query(query):
+    cleaned = (query or "").strip()
+    if len(cleaned.split()) > MAX_QUERY_WORDS:
+        raise ValueError("Search input cannot exceed 500 words")
+    return cleaned
+
+
+def _extract_activity(query):
+    match = re.search(r"\b(?:is|are|was|were)\s+(?:doing\s+)?(.+)$", query, flags=re.IGNORECASE)
+    if not match:
+        return None
+    return re.sub(r"[.!?,]+$", "", match.group(1)).strip() or None
 
 
 def search_videos(
@@ -10,17 +27,30 @@ def search_videos(
     threshold=0.20,
     max_per_video=1,
     model=None,
+    rerank_frames=True,
+    frame_interval=2.0,
+    frames_per_segment=2,
+    segment_stride=None,
+    use_captions=False,
 ):
     """Search the saved FAISS index and return ranked timestamped results."""
-    if not query or not query.strip():
+    query = validate_query(query)
+    if not query:
         return []
 
-    index = load_index()
+    try:
+        index = load_index()
+    except FileNotFoundError:
+        return []
     if index.ntotal == 0:
         return []
 
     query_vector = encode_search_text(query.strip(), model=model)
     scores, ids = index.search(query_vector.reshape(1, -1), index.ntotal)
+    activity = _extract_activity(query)
+    if activity:
+        activity_vector = encode_search_text(activity, model=model)
+        scores, ids = index.search(activity_vector.reshape(1, -1), index.ntotal)
     metadata = {
         row["faiss_id"]: row for row in get_all_segment_metadata()
     }

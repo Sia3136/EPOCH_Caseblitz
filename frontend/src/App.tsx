@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  getHealth,
-  searchClips,
-  searchScript,
-  uploadLibrary,
-  type NormalisedResult,
-} from "./api";
+import { getHealth, searchScript, uploadLibrary, type NormalisedResult, searchClips } from "./api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon
@@ -45,173 +39,12 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TrustBar
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TrustBar() {
-  const items = ["No sign-up", "No tags required", "500 MB max", "MP4 · MOV · MKV", "Runs locally"];
-  return (
-    <div className="trust-bar" aria-label="Key facts">
-      {items.map((item, i) => (
-        <span key={item} className="trust-item">
-          {i > 0 && <span className="trust-sep" aria-hidden="true">·</span>}
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BeforeAfter — full-width, white-panel style
-// ─────────────────────────────────────────────────────────────────────────────
-
-function BeforeAfter({ onUpload }: { onUpload: () => void }) {
-  return (
-    <section className="ba-section" aria-labelledby="ba-heading">
-      <div className="ba-header">
-        <div className="eyebrow"><span>02</span> The difference</div>
-        <h2 id="ba-heading" className="ba-title">
-          Before FrameFind.<span> After FrameFind.</span>
-        </h2>
-      </div>
-
-      {/* Full-width white composer-style panel */}
-      <div className="ba-panel">
-        <div className="ba-panel-inner">
-
-          {/* BEFORE column */}
-          <div className="ba-col ba-col--before">
-            <div className="ba-col-label">
-              <span className="ba-pill ba-pill--before">Before FrameFind</span>
-            </div>
-
-            <div className="ba-block">
-              <span className="ba-block-label">You need</span>
-              <p className="ba-query-text">"busy street market, golden hour"</p>
-            </div>
-
-            <div className="ba-block">
-              <span className="ba-block-label">Your files</span>
-              <div className="ba-file-list">
-                {["clip_0047.mp4", "shoot_day3.mp4", "untitled_export.mp4"].map(f => (
-                  <div key={f} className="ba-file-row">
-                    <span className="ba-file-icon">▣</span>
-                    <span>{f}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="ba-result ba-result--bad">
-              <Icon name="x" size={14} />
-              <span>No useful match</span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="ba-divider" aria-hidden="true">
-            <div className="ba-divider-line" />
-            <span className="ba-divider-label">VS</span>
-            <div className="ba-divider-line" />
-          </div>
-
-          {/* AFTER column */}
-          <div className="ba-col ba-col--after">
-            <div className="ba-col-label">
-              <span className="ba-pill ba-pill--after">
-                <span className="ba-dot" />After FrameFind
-              </span>
-            </div>
-
-            <div className="ba-block">
-              <span className="ba-block-label">Query</span>
-              <p className="ba-query-text">"busy street market, golden hour"</p>
-            </div>
-
-            <div className="ba-match-card">
-              <div className="ba-match-top">
-                <span className="ba-match-file">market_footage_02.mp4</span>
-                <span className="ba-match-score">84%</span>
-              </div>
-              <div className="ba-match-ts">
-                <Icon name="clock" size={12} />
-                Timestamp: 00:14 → 00:22
-              </div>
-              <p className="ba-match-caption">"A crowded outdoor bazaar at dusk, warm light"</p>
-            </div>
-
-            <div className="ba-result ba-result--good">
-              <Icon name="check" size={14} />
-              <span>Exact match found</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Panel footer CTA */}
-        <div className="ba-panel-footer">
-          <span className="ba-footer-note">
-            <Icon name="bolt" size={13} />
-            CLIP embeddings match meaning, not filenames
-          </span>
-          <button className="ba-footer-cta" onClick={onUpload}>
-            Index your footage <Icon name="arrow" size={14} />
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HowItWorks
-// ─────────────────────────────────────────────────────────────────────────────
-
-const HOW_STEPS = [
-  { num: "01", icon: "upload" as IconName, title: "Upload your library",       body: "Drop a .zip of your footage. We extract frames and build a searchable index automatically." },
-  { num: "02", icon: "sparkles" as IconName, title: "Search by meaning",        body: "Describe what you need in plain language or paste an entire narration script." },
-  { num: "03", icon: "clock" as IconName,   title: "Get timestamps, not clips", body: "Every result shows where the match occurs, with confidence and a one-line explanation." },
-];
-
-function HowItWorks({ onUpload }: { onUpload: () => void }) {
-  return (
-    <section className="how-section" aria-labelledby="how-heading">
-      <div className="how-header">
-        <div className="eyebrow"><span>03</span> How it works</div>
-        <h2 id="how-heading" className="how-title">Three steps.<span> Zero scrubbing.</span></h2>
-      </div>
-      <div className="how-grid">
-        {HOW_STEPS.map((step, i) => (
-          <div key={step.num} className={`how-step ${i === 0 ? "how-step--accent" : ""}`}>
-            <div className="how-step-top">
-              <span className="how-num">{step.num}</span>
-              <span className="how-sparkle">✦</span>
-            </div>
-            <div className="how-icon-wrap"><Icon name={step.icon} size={22} /></div>
-            <h3 className="how-step-title">{step.title}</h3>
-            <p className="how-step-body">{step.body}</p>
-            <div className="how-status">
-              <span className="how-status-dot" />
-              Ready for your footage
-            </div>
-            {i === 0 && (
-              <button className="how-cta" onClick={onUpload}>Upload footage <Icon name="arrow" size={14} /></button>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MatchCard({ match, index, playing, onPlay }: {
-  match: NormalisedResult; index: number; playing: number | null; onPlay: () => void;
+  match: NormalisedResult; index: number; playing: boolean; onPlay: () => void;
 }) {
-  const isPlaying = playing === index;
   return (
     <article className={`match-card ${index === 0 ? "featured" : ""}`}>
       <div className="visual">
@@ -223,8 +56,8 @@ function MatchCard({ match, index, playing, onPlay }: {
         <div className="score-ring" style={{ "--score": `${match.score * 3.6}deg` } as React.CSSProperties}>
           <span>{match.score}%</span>
         </div>
-        <button className={`play-button ${isPlaying ? "playing" : ""}`} onClick={onPlay} aria-label={`Play ${match.title}`}>
-          {isPlaying ? <span className="equalizer"><i /><i /><i /></span> : <Icon name="play" size={24} />}
+        <button className={`play-button ${playing ? "playing" : ""}`} onClick={onPlay} aria-label={`Play ${match.title}`}>
+          {playing ? <span className="equalizer"><i /><i /><i /></span> : <Icon name="play" size={24} />}
         </button>
         <div className="timecode"><Icon name="clock" size={14} />{match.time}</div>
         {match.qualityFlag && <span className="quality-badge">{match.qualityFlag.toUpperCase()}</span>}
@@ -234,6 +67,7 @@ function MatchCard({ match, index, playing, onPlay }: {
           <span className="match-tag"><Icon name="sparkles" size={13} />Semantic match</span>
           <h3>{match.title || match.file}</h3>
           <p>{match.file}</p>
+          {match.caption && <p style={{marginTop: 6, fontStyle: "italic"}}>{match.caption}</p>}
         </div>
         <button className="open-button" onClick={onPlay} aria-label={`Open ${match.title}`}><Icon name="arrow" /></button>
       </div>
@@ -274,214 +108,66 @@ function VideoModal({ clip, onClose }: { clip: NormalisedResult; onClose: () => 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UploadModal — after done, scrolls to composer
+// App - Following Streamlit Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-function UploadModal({
-  onClose, onDone, onGoToSearch,
-}: {
-  onClose: () => void;
-  onDone: (clips: number, segments: number) => void;
-  onGoToSearch: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus]     = useState("");
-  const [currentClip, setCurrentClip] = useState("");
-  const [error, setError]       = useState("");
-  const [skipped, setSkipped]   = useState<string[]>([]);
-  const busy = progress > 0 && progress < 100;
-  const done = progress === 100;
-
-  const STAGES = ["Uploading", "Extracting frames", "Generating embeddings", "Building index"];
-  const activeStage = progress >= 100 ? 4 : progress >= 80 ? 4 : progress >= 45 ? 3 : progress > 0 ? 2 : 1;
-
-  function stageLabel(pct: number) {
-    if (pct <= 0)  return "";
-    if (pct < 10)  return "Uploading…";
-    if (pct < 45)  return "Extracting frames…";
-    if (pct < 80)  return "Generating embeddings…";
-    if (pct < 100) return "Building searchable index…";
-    return "Library indexed — ready to search.";
-  }
-
-  async function handleFile(file: File | undefined) {
-    if (!file) return;
-    if (!file.name.endsWith(".zip")) {
-      setError("Please upload a .zip file containing MP4 or MOV video clips."); return;
-    }
-    setError(""); setProgress(5); setStatus("Uploading…"); setCurrentClip("");
-    try {
-      const result = await uploadLibrary(file, (pct, clip) => {
-        setProgress(pct); setStatus(stageLabel(pct));
-        if (clip) setCurrentClip(clip);
-      });
-      setProgress(100);
-      setStatus("Library indexed — ready to search.");
-      setSkipped(result.skipped);
-      onDone(result.clips_indexed, result.segments_indexed);
-    } catch (err) {
-      setError((err as Error).message); setProgress(0); setStatus("");
-    }
-  }
-
-  function handleStartSearching() {
-    onGoToSearch();
-  }
-
-  return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="library-modal" onMouseDown={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>Close</button>
-
-        {!busy && !done && (
-          <>
-            <div className="drop-icon"><Icon name="upload" size={30} /></div>
-            <span className="modal-kicker">Build your visual memory</span>
-            <h2>Upload your folder.</h2>
-            <p>Upload one ZIP containing MP4 or MOV clips (max size of folder is 500mb, max 50 clips, max 60s per clip). We extract frames and build a searchable index automatically.</p>
-            <button className="choose-button" onClick={() => inputRef.current?.click()}>
-              Upload folder <Icon name="arrow" />
-            </button>
-            <small>ZIP only · MP4 / MOV inside · 500MB max folder · max 50 clips · max 60s per clip</small>
-            {error && <p className="upload-error">{error}</p>}
-          </>
-        )}
-
-        {(busy || done) && (
-          <div className="upload-progress-wrap">
-            <div className="upload-progress-kicker">{done ? "✓ Indexed" : "Indexing in progress"}</div>
-            {!done && (
-              <div className="fun-status-message" style={{ marginBottom: "12px", fontSize: "14px", color: "var(--ink)", fontWeight: "800", display: "flex", alignItems: "center" }}>
-                {progress < 20 ? "Warming up the engines..." : progress < 45 ? "Analyzing pixels, finding the magic..." : progress < 70 ? "Teaching AI your story..." : progress < 90 ? "Connecting the dots..." : "Almost there, putting on the final touches..."}
-              </div>
-            )}
-            <div className="upload-bar-track">
-              <div className="upload-bar-fill" style={{ width: `${progress}%`, transition: "width 0.3s ease" }} />
-            </div>
-            <div className="upload-stage-grid">
-              {STAGES.map((s, i) => (
-                <div key={s} className={`upload-stage ${i + 1 < activeStage ? "done" : i + 1 === activeStage ? "active" : ""}`}>
-                  <div className="upload-stage-num">{i + 1 < activeStage ? "✓" : i + 1}</div>
-                  {s}
-                </div>
-              ))}
-            </div>
-            <p className="upload-status-text">{status}</p>
-            {currentClip && !done && <p className="upload-clip-name">Processing: {currentClip}</p>}
-            {done && (
-              <>
-                <p className="upload-done-msg">Indexing complete. Ready to search for your context.</p>
-                {skipped.length > 0 && (
-                  <details className="upload-skipped">
-                    <summary>{skipped.length} file{skipped.length > 1 ? "s" : ""} skipped (unreadable)</summary>
-                    <ul>{skipped.map(f => <li key={f}>{f}</li>)}</ul>
-                  </details>
-                )}
-                {/* ── KEY FIX: navigates to composer ── */}
-                <button className="choose-button" style={{ marginTop: 20 }} onClick={handleStartSearching}>
-                  Open indexed library <Icon name="arrow" />
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        <input ref={inputRef} type="file" accept=".zip" style={{ display: "none" }}
-          onChange={e => handleFile(e.target.files?.[0])} />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// App
-// ─────────────────────────────────────────────────────────────────────────────
-
-function IndexedLibraryPage({
+function UploadPage({
+  file,
+  progress,
+  status,
+  error,
+  indexed,
   stats,
-  onSearch,
-  onUpload,
+  onBrowse,
+  onFile,
+  onIndex,
+  onBack,
 }: {
-  stats: { clips: number; segments: number };
-  onSearch: () => void;
-  onUpload: () => void;
+  file: File | null;
+  progress: number;
+  status: string;
+  error: string;
+  indexed: boolean;
+  stats: { clips: number; segments: number } | null;
+  onBrowse: () => void;
+  onFile: (file: File | undefined) => void;
+  onIndex: () => void;
+  onBack: () => void;
 }) {
-  return <main className="indexed-page">
-    <nav className="topbar indexed-topbar">
-      <span className="brand"><span className="brand-mark"><Icon name="aperture" size={25} /></span><span>FRAME<span className="brand-accent">MIND</span></span><sup>AI</sup></span>
-      <button className="nav-index-btn" onClick={onUpload}><Icon name="upload" size={15} />Upload your folder</button>
-    </nav>
-    <section className="indexed-content">
-      <div className="eyebrow"><span>04</span> Library intelligence</div>
-      <h1>Your footage is<br /><em>ready to search.</em></h1>
-      <p className="indexed-lede">Your visual library has been indexed. Search by meaning, or let your story find the shots for you.</p>
-      <div className="indexed-stats"><div><span>CLIPS INDEXED</span><strong>{stats.clips}</strong></div><div><span>SEARCHABLE SEGMENTS</span><strong>{stats.segments}</strong></div><div><span>INDEX STATUS</span><strong className="indexed-ready">READY</strong></div></div>
-      <div className="indexed-actions"><button className="nav-index-btn" onClick={onSearch}>Search your footage <Icon name="arrow" size={15} /></button></div>
-      <div className="indexed-note"><Icon name="check" size={14} /> CLIP embeddings · FAISS index · Runs locally</div>
-    </section>
+  const stages = ["Uploading", "Extracting frames", "Generating embeddings", "Building index"];
+  const activeStage = progress >= 100 ? 4 : progress >= 80 ? 4 : progress >= 40 ? 3 : progress > 0 ? 2 : 1;
+  const inputRef = useRef<HTMLInputElement>(null);
+  return <main className="upload-page">
+    <nav className="topbar"><button className="brand" onClick={onBack}><span className="brand-mark"><Icon name="aperture" size={25} /></span><span>FRAME<span className="brand-accent">MIND</span></span><sup>AI</sup></button><button className="nav-index-btn" onClick={onBack}>Back to search</button></nav>
+    <section className="upload-page-content"><input ref={inputRef} type="file" accept=".zip" hidden onChange={(event) => onFile(event.target.files?.[0])} /><div className="eyebrow"><span>02</span> Library ingest</div><h1>Upload your<br /><em>folder.</em></h1><p>Bring in a ZIP of your footage. We extract the visual moments and make them searchable.</p><button className="upload-drop-card" onClick={() => { onBrowse(); inputRef.current?.click(); }}><Icon name="upload" size={30} /><strong>{file ? file.name : "Choose a ZIP folder"}</strong><span>{file ? "Ready to index" : "MP4 · MOV · MKV · 500 MB max · Runs locally"}</span></button>{file && !indexed && progress === 0 && <button className="nav-index-btn upload-start" onClick={onIndex}>Start indexing <Icon name="arrow" size={15} /></button>}{(progress > 0 || indexed) && <div className="upload-page-progress"><div className="upload-progress-kicker">{indexed ? "✓ Indexing complete" : "Indexing in progress"}</div><div className="upload-bar-track"><div className="upload-bar-fill" style={{ width: `${progress}%` }} /></div><div className="upload-page-stages">{stages.map((stage, index) => <div className={index + 1 < activeStage ? "done" : index + 1 === activeStage ? "active" : ""} key={stage}><b>{index + 1 < activeStage ? "✓" : index + 1}</b><span>{stage}</span></div>)}</div><p className="upload-status-text">{status}</p>{indexed && stats && <div className="upload-ready"><strong>Library ready</strong><span>{stats.clips} clips · {stats.segments} searchable segments</span></div>}</div>}{error && <div className="upload-error-box" role="alert">{error}</div>}</section>
   </main>;
 }
 
 export default function App() {
-  const composerRef = useRef<HTMLElement>(null);
-
-  const [mode, setMode]     = useState<"script" | "search">("script");
-  const [query, setQuery]   = useState("A person walking alone through the city at night");
-  const [script, setScript] = useState(
-    "Starting my own business was the biggest risk I ever took. Every morning, I shaped the work with my own two hands. Slowly, the city began to notice what we were building.",
-  );
-
-  const [results, setResults]             = useState<NormalisedResult[]>([
-    { clipId: "s1", file: "walking_night.mp4", title: "City walking", caption: "A solitary figure walking down a neon-lit street.", time: "01:23 → 01:30", start: 83, end: 90, score: 96, qualityFlag: "", image: "https://images.unsplash.com/photo-1555589943-4f9b8c0c10c2?auto=format&fit=crop&w=400&q=80", videoUrl: "" },
-    { clipId: "s2", file: "alleyway_02.mp4", title: "Dark alley", caption: "Person walking away in a dark alley.", time: "00:10 → 00:15", start: 10, end: 15, score: 89, qualityFlag: "dark", image: "https://images.unsplash.com/photo-1509822929063-6b6cfc9b42f2?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
-  ]);
-  const [scriptScenes, setScriptScenes]   = useState<Array<{ scene_index: number; sentence: string; results: NormalisedResult[] }>>([
-    {
-      scene_index: 0,
-      sentence: "Starting my own business was the biggest risk I ever took.",
-      results: [
-        { clipId: "d1", file: "leap_of_faith_01.mp4", title: "Looking over the city", caption: "A person standing at the edge of a rooftop at dusk.", time: "00:12 → 00:18", start: 12, end: 18, score: 94, qualityFlag: "", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80", videoUrl: "" },
-        { clipId: "d2", file: "office_late_night.mp4", title: "Working late", caption: "Silhouette typing on a laptop in a dark office.", time: "00:45 → 00:52", start: 45, end: 52, score: 87, qualityFlag: "dark", image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
-      ]
-    },
-    {
-      scene_index: 1,
-      sentence: "Every morning, I shaped the work with my own two hands.",
-      results: [
-        { clipId: "d3", file: "pottery_wheel.mp4", title: "Hands shaping clay", caption: "Close up of muddy hands shaping a vase.", time: "00:10 → 00:18", start: 10, end: 18, score: 91, qualityFlag: "", image: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
-      ]
-    },
-    {
-      scene_index: 2,
-      sentence: "Slowly, the city began to notice what we were building.",
-      results: [
-        { clipId: "d4", file: "city_sunrise.mp4", title: "City skyline at dawn", caption: "Time-lapse of the city waking up.", time: "00:00 → 00:08", start: 0, end: 8, score: 88, qualityFlag: "", image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=400&q=80", videoUrl: "" }
-      ]
-    }
-  ]);
-  const [activeScene, setActiveScene]     = useState(0);
-  const [scriptTruncated, setScriptTruncated] = useState(false);
-
-  const [analyzing, setAnalyzing]             = useState(false);
-  const [analyzeProgress, setAnalyzeProgress] = useState(0);
-  const [error, setError]                     = useState("");
-  const [hasResults, setHasResults]           = useState(true);
-
-  const [hideBlurry, setHideBlurry] = useState(false);
-  const [hideDark, setHideDark]     = useState(false);
-  const [sceneBusy, setSceneBusy]   = useState(false);
-
-  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-  const [playClip, setPlayClip]         = useState<NormalisedResult | null>(null);
-  const [libraryOpen, setLibraryOpen]   = useState(false);
-  const [libraryReady, setLibraryReady] = useState(false);
-  const [startedSearching, setStartedSearching] = useState(false);
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Health
   const [modelConnected, setModelConnected] = useState<boolean | null>(null);
-  const [indexStats, setIndexStats]         = useState<{ clips: number; segments: number } | null>(null);
+  
+  // Upload State
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [hasIndexed, setHasIndexed] = useState(false);
+  const [indexStats, setIndexStats] = useState<{clips: number, segments: number} | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const [showUploadPage, setShowUploadPage] = useState(false);
+  
+  // Search State
+  const [query, setQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [scriptScenes, setScriptScenes] = useState<Array<{ scene_index: number; sentence: string; results: NormalisedResult[] }>>([]);
+  const [singleResults, setSingleResults] = useState<NormalisedResult[] | null>(null);
+  const [searchError, setSearchError] = useState("");
+  
+  const [playClip, setPlayClip] = useState<NormalisedResult | null>(null);
 
-  // /health polling
   useEffect(() => {
     let mounted = true;
     async function check() {
@@ -492,284 +178,195 @@ export default function App() {
     return () => { mounted = false; clearInterval(t); };
   }, []);
 
-  // Fake progress animation
-  useEffect(() => {
-    if (!analyzing) return;
-    setAnalyzeProgress(8);
-    const t = setInterval(() => {
-      setAnalyzeProgress(v => { if (v >= 92) { clearInterval(t); return 92; } return Math.min(v + Math.floor(Math.random() * 12) + 5, 92); });
-    }, 220);
-    return () => clearInterval(t);
-  }, [analyzing]);
-
-  async function runAnalysis() {
-    if (analyzing) return;
-    if (!modelConnected) { setError("Backend ML model is not ready. Start the server with: python run.py"); return; }
-    setError(""); setPlayingIndex(null); setAnalyzing(true); setHasResults(false); setScriptTruncated(false);
+  async function handleIndexLibrary() {
+    if (!uploadFile) return;
+    setUploadError("");
+    setIsUploading(true);
+    setUploadProgress(5);
+    setUploadStatus("Uploading to backend...");
     try {
-      if (mode === "search") {
-        const data = await searchClips(query.trim() || "person walking alone at night");
-        setResults(data.results);
-        if (data.message && data.results.length === 0) setError(data.message);
+      const result = await uploadLibrary(uploadFile, (pct) => {
+        setUploadProgress(pct);
+        if (pct < 10) setUploadStatus("Uploading...");
+        else if (pct < 40) setUploadStatus("Extracting frames...");
+        else if (pct < 80) setUploadStatus("Generating embeddings...");
+        else setUploadStatus("Building searchable index...");
+      });
+      setUploadProgress(100);
+      setUploadStatus("Indexing complete.");
+      setHasIndexed(true);
+      setIndexStats({ clips: result.clips_indexed, segments: result.segments_indexed });
+    } catch (err) {
+      setUploadError((err as Error).message);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function handleSearch() {
+    if (!query.trim()) return;
+    setSearchError("");
+    setScriptScenes([]);
+    setSingleResults(null);
+    setIsSearching(true);
+    
+    try {
+      const data = await searchScript(query);
+      if (data.scenes.length > 1) {
+        setScriptScenes(data.scenes);
       } else {
-        const data = await searchScript(script);
-        setScriptScenes(data.scenes); setScriptTruncated(data.truncated); setActiveScene(0);
-        if (data.scenes.length === 0) setError("No sentences found in your script.");
+        // Fallback to single search if it's just one scene/query
+        const singleData = await searchClips(query);
+        setSingleResults(singleData.results);
+        if (singleData.results.length === 0) {
+            setSearchError("No relevant footage found. Try another description.");
+        }
       }
-      setHasResults(true);
-    } catch (err) { setError((err as Error).message); }
-    finally { setAnalyzeProgress(100); setAnalyzing(false); }
+    } catch (err) {
+      setSearchError((err as Error).message);
+    } finally {
+      setIsSearching(false);
+    }
   }
 
-  async function reSearchScene(sceneIndex: number, sentence: string) {
-    if (sceneBusy || !modelConnected) return;
-    setSceneBusy(true);
-    try {
-      const data = await searchClips(sentence);
-      setScriptScenes(prev => prev.map((s, i) => i === sceneIndex ? { ...s, results: data.results } : s));
-    } catch (err) { setError((err as Error).message); }
-    finally { setSceneBusy(false); }
-  }
-
-  function handlePlay(match: NormalisedResult, index: number) {
-    if (match.videoUrl) { setPlayClip(match); setPlayingIndex(index); }
-    else setPlayingIndex(playingIndex === index ? null : index);
-  }
-
-  function applyQualityFilter(list: NormalisedResult[]) {
-    return list.filter(r => {
-      if (hideBlurry && r.qualityFlag === "blurry") return false;
-      if (hideDark   && r.qualityFlag === "dark")   return false;
-      return true;
-    });
-  }
-
-  const rawResults     = mode === "search" ? results : (scriptScenes[activeScene]?.results ?? []);
-  const currentResults = applyQualityFilter(rawResults);
-
-  const sceneList = scriptScenes.length > 0
-    ? scriptScenes.map((s, i) => ({ number: String(i + 1).padStart(2, "0"), label: `Scene ${i + 1}`, text: s.sentence, count: s.results.length }))
-    : [
-        { number: "01", label: "The leap",  text: "Starting my own business was the biggest risk I ever took.", count: 0 },
-        { number: "02", label: "The craft", text: "Every morning, I shaped the work with my own two hands.",   count: 0 },
-        { number: "03", label: "The city",  text: "Slowly, the city began to notice what we were building.",   count: 0 },
-      ];
-
-  const totalMatches  = mode === "search" ? results.length : scriptScenes.reduce((s, sc) => s + sc.results.length, 0);
-  const navClips      = indexStats?.clips    ?? (modelConnected ? "—" : "?");
-  const navSegments   = indexStats?.segments ?? (modelConnected ? "—" : "?");
-  const wordCount     = script.trim().split(/\s+/).filter(Boolean).length;
-  const sentenceCount = script.trim().split(/(?<=[.!?])\s+|\n+/).filter(s => s.trim().length > 0).length;
-
-  const dotStyle: React.CSSProperties = modelConnected === null
-    ? { background: "var(--muted)" }
-    : modelConnected
-      ? { background: "var(--acid)", boxShadow: "0 0 10px var(--acid)", animation: "pulse 2s infinite" }
-      : { background: "#e05252" };
-
-  if (libraryReady && indexStats) {
-    return <IndexedLibraryPage stats={indexStats} onSearch={() => { setLibraryReady(false); setMode("search"); setStartedSearching(true); setTimeout(() => composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); }} onUpload={() => { setLibraryReady(false); setLibraryOpen(true); }} />;
+  if (showUploadPage) {
+    return <UploadPage file={uploadFile} progress={uploadProgress} status={uploadStatus} error={uploadError} indexed={hasIndexed} stats={indexStats} onBrowse={() => undefined} onFile={(file) => { setUploadFile(file ?? null); setHasIndexed(false); setUploadProgress(0); setUploadError(""); }} onIndex={handleIndexLibrary} onBack={() => setShowUploadPage(false)} />;
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" style={{ paddingBottom: 100 }}>
       <div className="noise" />
-
-      {/* ── Navbar — single upload button ── */}
+      
       <nav className="topbar">
-        <button className="brand" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+        <div className="brand">
           <span className="brand-mark"><Icon name="aperture" size={25} /></span>
           <span>FRAME<span className="brand-accent">MIND</span></span>
           <sup>AI</sup>
-        </button>
+        </div>
         <div className="nav-center">
-          <span className="status-dot" style={dotStyle}
-            title={modelConnected === null ? "Checking…" : modelConnected ? "Engine ready" : "Backend offline"} />
-          <span>{navClips} clips</span>
-          <i />
-          <span>{navSegments} segments indexed</span>
+          <span className="status-dot" style={{ background: modelConnected ? "var(--acid)" : "#e05252" }} />
+          <span>{modelConnected ? "Engine ready" : "Backend offline"}</span>
         </div>
-        <div className="nav-actions">
-          {/* Single CTA button — replaces Library + Add footage */}
-          <button className="upload-button nav-index-btn" onClick={() => setLibraryOpen(true)}>
-            <Icon name="upload" size={15} />
-            Upload your folder
-          </button>
-        </div>
+        <button className="nav-index-btn" onClick={() => setShowUploadPage(true)}><Icon name="upload" size={15} />Upload your folder</button>
       </nav>
 
-      {/* ── Global error banner ── */}
-      {error && (
-        <div role="alert" className="error-banner">
-          <span>{error}</span>
-          <button onClick={() => setError("")} aria-label="Dismiss"><Icon name="x" size={16} /></button>
-        </div>
-      )}
-
-      {!startedSearching && (
-        <>
-          {/* ── Hero ── */}
-          <section className="hero">
-            <div className="eyebrow"><span>01</span> Narrative intelligence for editors</div>
-            <div className="hero-grid">
-              <div>
-                <h1>Your story,<span>already in frame.</span></h1>
-              </div>
-              <div className="hero-aside">
-                <Icon name="wave" size={28} />
-                <p>Stop searching by filename. Describe the feeling, paste the narrative, find the exact moment.</p>
-              </div>
-            </div>
-            <div className="hero-marquee" aria-hidden="true">
-              SEMANTIC SEARCH <i /> SCENE MATCHING <i /> TIMESTAMP PRECISION
-            </div>
-            <TrustBar />
-          </section>
-
-          {/* ── Before / After ── */}
-          <BeforeAfter onUpload={() => setLibraryOpen(true)} />
-
-          {/* ── How It Works ── */}
-          <HowItWorks onUpload={() => setLibraryOpen(true)} />
-        </>
-      )}
-
-      {/* ── Composer ── */}
-      <section className="workspace" ref={composerRef as React.Ref<HTMLElement>}>
-        <div className="composer">
-          <div className="mode-switch">
-            <button className={mode === "script" ? "active" : ""} onClick={() => setMode("script")}>
-              <Icon name="sparkles" size={16} />Script mode<span>USP</span>
+      <div style={{ maxWidth: 1000, margin: "60px auto 0", padding: "0 20px" }}>
+        
+        {/* Streamlit-style Flow: 1. Header */}
+        <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", margin: "0 0 10px" }}>AI-Powered B-roll Search</h1>
+        <p style={{ color: "var(--muted)", fontSize: 18, marginBottom: 40 }}>Find the right footage using natural language.</p>
+        
+        {/* Streamlit-style Flow: 2. Upload Section */}
+        <div style={{ background: "var(--paper)", padding: 30, borderRadius: 8, color: "var(--ink)", marginBottom: 40 }}>
+          <h2 style={{ fontSize: 20, marginBottom: 15 }}>Upload your video library (ZIP)</h2>
+          
+          <input type="file" accept=".zip" style={{ display: "none" }} ref={fileInputRef} 
+                 onChange={e => setUploadFile(e.target.files?.[0] || null)} />
+                 
+          <div style={{ display: "flex", gap: 15, alignItems: "center", marginBottom: 15 }}>
+            <button className="nav-index-btn" onClick={() => fileInputRef.current?.click()}>
+              <Icon name="folder" size={15} /> {uploadFile ? uploadFile.name : "Browse files"}
             </button>
-            <button className={mode === "search" ? "active" : ""} onClick={() => setMode("search")}>
-              <Icon name="search" size={16} />Single search
-            </button>
-          </div>
-          <div className="composer-body">
-            <div className="composer-label">
-              <span>{mode === "script" ? "Paste your narration" : "Describe the shot"}</span>
-              {mode === "script"
-                ? <span className={sentenceCount > 20 ? "composer-counter warn" : "composer-counter"}>{wordCount} words · {sentenceCount}/20 sentences</span>
-                : <span className="composer-counter">Natural language</span>}
-            </div>
-            {mode === "script"
-              ? <textarea value={script} onChange={e => setScript(e.target.value)} aria-label="Narration script" />
-              : <input value={query} onChange={e => setQuery(e.target.value)} aria-label="Search query" />}
-            <div className="composer-footer">
-              <div className="ai-note"><Icon name="bolt" size={15} />AI splits your narrative into visual beats automatically</div>
-              <button className="analyze-button" onClick={runAnalysis} disabled={analyzing}>
-                {analyzing ? "Reading narrative" : mode === "script" ? "Find my story" : "Search footage"}
-                <Icon name={analyzing ? "wave" : "arrow"} />
+            {uploadFile && !hasIndexed && !isUploading && (
+              <button className="analyze-button" onClick={handleIndexLibrary}>
+                Index video library
               </button>
-            </div>
+            )}
           </div>
-          {analyzing && (
-            <div className="analysis-overlay">
-              <div className="scan-line" style={{ left: `${analyzeProgress}%` }} />
-              <div><span>CLIP / FAISS</span><strong>Mapping meaning to moments</strong></div>
-              <b>{analyzeProgress}%</b>
-              <div className="progress-track"><i style={{ width: `${analyzeProgress}%` }} /></div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── Script truncation warning ── */}
-      {scriptTruncated && (
-        <div className="truncation-banner" role="status">
-          <Icon name="bolt" size={14} />
-          Your script was long — only the first 20 sentences were searched.
-          <button onClick={() => setScriptTruncated(false)} aria-label="Dismiss"><Icon name="x" size={13} /></button>
-        </div>
-      )}
-
-      {/* ── Results ── */}
-      <section className={`results ${analyzing ? "results-muted" : ""}`}>
-        <aside className="scene-rail">
-          <div className="rail-heading"><span>Scene map</span><b>{sceneList.length}</b></div>
-          <div className="scene-line" />
-          {sceneList.map((scene, index) => (
-            <button key={scene.number} className={`scene-item ${activeScene === index ? "active" : ""}`}
-              onClick={() => { setActiveScene(index); setPlayingIndex(null); }}>
-              <span className="scene-number">{scene.number}</span>
-              <span className="scene-info"><b>{scene.label}</b><small>{scene.count > 0 ? `${scene.count} matches` : "—"}</small></span>
-              <Icon name="chevron" size={16} />
-            </button>
-          ))}
-          {hasResults && totalMatches > 0 && (
-            <div className="rail-summary">
-              <Icon name="check" size={17} />
-              <div><b>All scenes covered</b><span>{totalMatches} quality matches</span></div>
-            </div>
-          )}
-        </aside>
-
-        <div className="result-content">
-          <header className="result-header">
-            <div>
-              <div className="result-kicker">{mode === "search" ? "Search results" : `Scene ${sceneList[activeScene]?.number ?? "01"} / ${sceneList.length}`}</div>
-              <h2>"{mode === "search" ? (query || "person walking alone at night") : (sceneList[activeScene]?.text ?? "")}"</h2>
-            </div>
-            <div className="result-controls">
-              <div className="quality-filter" role="group" aria-label="Quality filters">
-                <span className="quality-filter-label"><Icon name="filter" size={13} /> Filter</span>
-                <button className={`qf-btn ${hideBlurry ? "qf-btn--active" : ""}`} onClick={() => setHideBlurry(v => !v)}>Blurry</button>
-                <button className={`qf-btn ${hideDark ? "qf-btn--active" : ""}`} onClick={() => setHideDark(v => !v)}>Dark</button>
+          
+          {uploadError && <p style={{ color: "#e05252", fontSize: 14 }}>{uploadError}</p>}
+          
+          {isUploading && (
+            <div style={{ marginTop: 20 }}>
+              <div className="upload-progress-kicker">Extracting and indexing videos...</div>
+              <div className="upload-bar-track">
+                <div className="upload-bar-fill" style={{ width: `${uploadProgress}%` }} />
               </div>
-              {mode === "script" && hasResults && scriptScenes[activeScene] && (
-                <button className="rescan-btn" onClick={() => reSearchScene(activeScene, scriptScenes[activeScene].sentence)} disabled={sceneBusy}>
-                  <Icon name="refresh" size={14} />{sceneBusy ? "Searching…" : "Re-search scene"}
-                </button>
-              )}
-              <div className="result-meta">
-                <Icon name="sparkles" size={16} />
-                {hasResults ? `${currentResults.length} ranked moments` : "Run analysis to see results"}
+              <p className="upload-status-text">{uploadStatus}</p>
+            </div>
+          )}
+          
+          {hasIndexed && indexStats && (
+            <div style={{ marginTop: 20, padding: 15, background: "#f0f2ea", borderRadius: 4, borderLeft: "4px solid var(--acid)" }}>
+              <div style={{ color: "#2a7a00", fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon name="check" size={16} /> Indexing complete
               </div>
-            </div>
-          </header>
-
-          {!hasResults && !analyzing && (
-            <div className="empty-state">
-              {modelConnected === false
-                ? "⚠ Backend offline — start the server with: python run.py"
-                : "Enter a query or paste a script above and click the button to find footage."}
-            </div>
-          )}
-
-          {currentResults.length > 0 && (
-            <div className="card-grid">
-              {currentResults.map((match, index) => (
-                <MatchCard key={`${match.clipId}-${index}`} match={match} index={index}
-                  playing={playingIndex} onPlay={() => handlePlay(match, index)} />
-              ))}
-            </div>
-          )}
-
-          {hasResults && currentResults.length === 0 && !analyzing && (
-            <div className="empty-state">
-              No strong match found.{" "}
-              {(hideBlurry || hideDark) && "Try removing quality filters, or "}
-              try rephrasing or uploading more footage.
+              <p style={{ margin: "5px 0 0", fontSize: 14 }}>Indexed {indexStats.clips} videos into {indexStats.segments} segments.</p>
             </div>
           )}
         </div>
-      </section>
-
-      <footer>
-        <div className="footer-mark"><Icon name="aperture" size={20} /> FRAMEMIND</div>
-        <p>Meaning in. Moments out.</p>
-        <span>Powered by CLIP · FAISS · curiosity</span>
-      </footer>
-
-      {libraryOpen && (
-        <UploadModal
-          onClose={() => setLibraryOpen(false)}
-          onDone={(clips, segments) => { setIndexStats({ clips, segments }); }}
-          onGoToSearch={() => { setLibraryOpen(false); setLibraryReady(true); }}
+        
+        <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "40px 0" }} />
+        
+        {/* Streamlit-style Flow: 3. Search Section */}
+        {!hasIndexed && (
+          <div style={{ padding: "15px 20px", background: "rgba(199, 255, 58, 0.1)", border: "1px solid var(--acid)", color: "var(--paper)", borderRadius: 6, marginBottom: 30 }}>
+            <Icon name="bolt" size={16} style={{ verticalAlign: "middle", marginRight: 8, color: "var(--acid)" }} />
+            Upload and index a video library to begin searching.
+          </div>
+        )}
+        
+        <h2 style={{ fontSize: 20, marginBottom: 10 }}>Search your video library</h2>
+        <textarea 
+          style={{ 
+            width: "100%", height: 120, background: "transparent", border: "1px solid var(--line)", 
+            color: "var(--paper)", padding: 15, fontSize: 16, fontFamily: "inherit", borderRadius: 6,
+            resize: "vertical", outline: "none"
+          }}
+          placeholder="Describe footage or paste narration, for example: A person walking through a busy city."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
         />
-      )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, marginBottom: 30 }}>
+          <span style={{ color: "var(--muted)", fontSize: 13 }}>Maximum input: 500 words</span>
+          <button className="analyze-button" onClick={handleSearch} disabled={isSearching || !query.trim()}>
+            {isSearching ? "Searching..." : "Search"} <Icon name="search" size={14} />
+          </button>
+        </div>
+        
+        {searchError && (
+          <div style={{ padding: "15px 20px", background: "rgba(224, 82, 82, 0.1)", border: "1px solid #e05252", color: "#e05252", borderRadius: 6 }}>
+            {searchError}
+          </div>
+        )}
+        
+        {/* Results Linear Display */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 50, marginTop: 40 }}>
+          {/* Multiple Scenes */}
+          {scriptScenes.length > 0 && scriptScenes.map(scene => (
+            <div key={scene.scene_index}>
+              <h3 style={{ fontSize: 18, color: "var(--acid)", marginBottom: 15 }}>
+                <span style={{ color: "var(--paper)" }}>Scene {scene.scene_index}:</span> {scene.sentence}
+              </h3>
+              
+              {scene.results.length === 0 ? (
+                <p style={{ color: "var(--muted)" }}>No relevant footage found for this sentence.</p>
+              ) : (
+                <div className="card-grid">
+                  {scene.results.map((res, i) => (
+                    <MatchCard key={i} match={res} index={i} playing={playClip === res} onPlay={() => setPlayClip(res)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {/* Single Query */}
+          {singleResults && (
+            <div>
+              <div className="card-grid">
+                {singleResults.map((res, i) => (
+                  <MatchCard key={i} match={res} index={i} playing={playClip === res} onPlay={() => setPlayClip(res)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+      </div>
+      
       {playClip && (
-        <VideoModal clip={playClip} onClose={() => { setPlayClip(null); setPlayingIndex(null); }} />
+        <VideoModal clip={playClip} onClose={() => setPlayClip(null)} />
       )}
     </main>
   );
