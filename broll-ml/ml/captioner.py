@@ -1,4 +1,6 @@
 """Video captioning helpers."""
+from functools import lru_cache
+
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
@@ -34,3 +36,9 @@ class BrollCaptioner:
             output[0],
             skip_special_tokens=True
         )
+
+
+@lru_cache(maxsize=1)
+def get_captioner():
+    """Load the caption model once, only when contextual reranking is used."""
+    return BrollCaptioner()

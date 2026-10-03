@@ -9,7 +9,7 @@ SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 MAX_VIDEO_DURATION = 60.0
 
 
-def assess_frame_quality(frame, blur_threshold=35.0):
+def assess_frame_quality(frame, blur_threshold=8.0):
     """Return interpretable quality signals without modifying the source frame."""
     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
@@ -21,7 +21,7 @@ def assess_frame_quality(frame, blur_threshold=35.0):
     # call a frame blurry when it has enough visible contrast to support it.
     if (
         contrast >= 12
-        and edge_density < 0.03
+        and edge_density >= 0.005
         and blur_score < blur_threshold
     ):
         issues.append("blurry")
@@ -58,6 +58,7 @@ def extract_video_frames(video_path, interval=2.0, max_frames=15):
             "timestamps": [],
             "duration": duration,
             "error": "video_longer_than_60_seconds",
+            "quality": [],
         }
     frames = []
     timestamps = []

@@ -96,8 +96,8 @@ def render_result(result, st):
             f"| confidence {result['confidence_score']}%"
         )
         st.caption(result["explanation"])
-        if result.get("quality_issues"):
-            st.warning("Visual quality flag: " + ", ".join(result["quality_issues"]))
+        if result.get("caption"):
+            st.caption(f"Context: {result['caption']}")
         st.video(result["video_path"], start_time=int(result["start_time"]))
 
 

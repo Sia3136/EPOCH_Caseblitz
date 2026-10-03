@@ -66,6 +66,8 @@ def generate_caption_rerank(
     caption_embeddings = {}
     for result in results:
         image = image_loader(result)
+        if image is None:
+            continue
         caption = captioner.caption(image)
         result["caption"] = caption
         caption_embeddings[result.get("segment_id")] = text_encoder(caption)

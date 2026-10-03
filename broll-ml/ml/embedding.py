@@ -25,11 +25,14 @@ def encode_text(text, model=None):
 
 
 def encode_search_text(text, model=None):
-    """Use simple image/video prompt variants for more stable text search."""
+    """Encode a visual prompt ensemble for more context-aware retrieval."""
     prompts = [
         text,
         f"a photo of {text}",
         f"a video of {text}",
+        f"a video frame showing {text}",
+        f"footage of {text}",
+        f"a scene with {text}",
     ]
     embeddings = [encode_text(prompt, model=model) for prompt in prompts]
     embedding = np.mean(embeddings, axis=0)

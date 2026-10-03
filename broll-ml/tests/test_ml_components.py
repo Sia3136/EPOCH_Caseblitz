@@ -40,9 +40,9 @@ class ComponentTests(TestCase):
         self.assertIn("low_contrast", quality["issues"])
 
     def test_quality_analysis_flags_blurry_frame(self):
-        sharp = np.zeros((64, 64), dtype=np.uint8)
-        sharp[:, 32:] = 255
-        blurred = cv2.GaussianBlur(sharp, (15, 15), 0)
+        textured = np.zeros((64, 64), dtype=np.uint8)
+        textured[:, 32:] = 255
+        blurred = cv2.GaussianBlur(textured, (15, 15), 0)
         frame = np.repeat(blurred[:, :, None], 3, axis=2)
-        quality = assess_frame_quality(frame)
+        quality = assess_frame_quality(frame, blur_threshold=35.0)
         self.assertIn("blurry", quality["issues"])

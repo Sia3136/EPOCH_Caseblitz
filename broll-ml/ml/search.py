@@ -1,7 +1,7 @@
 """Saved-index semantic search for text and scripts."""
 import re
 
-from ml.embedding import encode_search_text
+from ml.embedding import encode_search_text, encode_text
 from ml.indexing import load_cached_frame_embeddings
 from ml.ranking import rank_results, similarity_to_percentage
 from ml.reranking import frame_level_rerank
@@ -32,10 +32,11 @@ def search_videos(
     threshold=0.20,
     max_per_video=1,
     model=None,
-    rerank_frames=False,
+    rerank_frames=True,
     frame_interval=2.0,
     frames_per_segment=2,
     segment_stride=None,
+    use_captions=False,
 ):
     """Search the saved FAISS index and return ranked timestamped results."""
     query = validate_query(query)
@@ -185,7 +186,7 @@ def search_videos(
                 break
         results = ordered
 
-    if rerank_frames and results:
+    if rerank_frames and results and not allow_multiple_candidates:
         frames_by_video = {
             result["video_path"]: load_cached_frame_embeddings(
                 result["video_path"],
@@ -196,6 +197,32 @@ def search_videos(
             for result in results
         }
         results = frame_level_rerank(results, query_vector, frames_by_video)
+
+    if use_captions and results and not allow_multiple_candidates:
+        try:
+            from PIL import Image
+            from ml.captioner import get_captioner
+            from ml.reranking import generate_caption_rerank
+
+            def load_thumbnail(result):
+                thumbnail_path = result.get("thumbnail_path")
+                if not thumbnail_path:
+                    return None
+                try:
+                    return Image.open(thumbnail_path).convert("RGB")
+                except (OSError, ValueError):
+                    return None
+
+            results = generate_caption_rerank(
+                results,
+                query_vector,
+                get_captioner(),
+                load_thumbnail,
+                lambda caption: encode_text(caption, model=model),
+            )
+        except Exception:
+            # Captioning is an enhancement; visual CLIP search remains usable.
+            pass
 
     ranked_results = rank_results(results, threshold=0, max_results=top_k)
     if len(concepts) > 1:
