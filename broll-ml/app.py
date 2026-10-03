@@ -96,6 +96,7 @@ def validate_videos(video_paths, include_reasons=False):
 
 def render_result(result, st):
     columns = st.columns([1, 2])
+    video_path = Path(result["video_path"])
     with columns[0]:
         thumbnail = result.get("thumbnail_path")
         if thumbnail and Path(thumbnail).exists():
@@ -115,8 +116,14 @@ def render_result(result, st):
         )
         if result.get("caption"):
             st.caption(f"Context: {result['caption']}")
+        if not video_path.is_file():
+            st.warning(
+                "This result is unavailable because its source video was "
+                "removed. Upload and index the video library again."
+            )
+            return
         st.video(
-            result["video_path"],
+            str(video_path),
             start_time=result["start_time"],
             end_time=result["end_time"],
         )
