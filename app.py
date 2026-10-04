@@ -4,7 +4,7 @@ import shutil
 import uuid
 from zipfile import ZipFile
 
-from ml.indexing import index_video, unique_video_paths
+from ml.indexing import index_videos_parallel, unique_video_paths
 from ml.ranking import similarity_to_percentage
 from ml.search import MAX_QUERY_WORDS, search_videos
 from ml.script_processor import search_script
@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent
 VIDEO_ROOT = ROOT / "data" / "videos"
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 MAX_VIDEO_COUNT = 50
+INDEX_WORKERS = 4
 
 
 def extract_video_zip(uploaded_file, destination=VIDEO_ROOT):
@@ -65,12 +66,13 @@ def extract_video_zip(uploaded_file, destination=VIDEO_ROOT):
     return extracted
 
 
-def validate_videos(video_paths):
-    """Return paths that OpenCV can read at least one frame from."""
+def validate_videos(video_paths, include_reasons=False):
+    """Return readable paths and optionally reasons for skipped videos."""
     from ml.video_processor import extract_video_frames
 
     valid = []
     skipped = []
+    skip_reasons = {}
     for path in video_paths:
         try:
             result = extract_video_frames(path, max_frames=1)
@@ -80,11 +82,21 @@ def validate_videos(video_paths):
             valid.append(path)
         else:
             skipped.append(path)
+            if result.get("error") == "video_longer_than_60_seconds":
+                skip_reasons[path] = (
+                    f"longer than {MAX_VIDEO_DURATION:.0f} seconds "
+                    f"({result['duration']:.1f}s)"
+                )
+            else:
+                skip_reasons[path] = "OpenCV could not open or decode a frame"
+    if include_reasons:
+        return valid, skipped, skip_reasons
     return valid, skipped
 
 
 def render_result(result, st):
     columns = st.columns([1, 2])
+    video_path = Path(result["video_path"])
     with columns[0]:
         thumbnail = result.get("thumbnail_path")
         if thumbnail and Path(thumbnail).exists():
@@ -92,13 +104,29 @@ def render_result(result, st):
     with columns[1]:
         st.subheader(result["filename"])
         st.write(
-            f"{result['start_time']:.1f}s - {result['end_time']:.1f}s  "
+            f"Relevant timestamp: {result['start_time']:.1f}s - "
+            f"{result['end_time']:.1f}s  "
             f"| confidence {result['confidence_score']}%"
         )
-        st.caption(result["explanation"])
+        st.caption(
+            "Why this clip was chosen: "
+            f"{result['explanation']} The strongest match occurs from "
+            f"{result['start_time']:.1f}s to {result['end_time']:.1f}s "
+            f"with {result['confidence_score']}% confidence."
+        )
         if result.get("caption"):
             st.caption(f"Context: {result['caption']}")
-        st.video(result["video_path"], start_time=int(result["start_time"]))
+        if not video_path.is_file():
+            st.warning(
+                "This result is unavailable because its source video was "
+                "removed. Upload and index the video library again."
+            )
+            return
+        st.video(
+            str(video_path),
+            start_time=result["start_time"],
+            end_time=result["end_time"],
+        )
 
 
 def main():
@@ -119,21 +147,28 @@ def main():
         try:
             with st.status("Extracting and indexing videos...", expanded=True) as status:
                 paths = extract_video_zip(uploaded_zip)
-                valid, skipped = validate_videos(paths)
+                valid, skipped, skip_reasons = validate_videos(
+                    paths, include_reasons=True
+                )
                 unique = unique_video_paths(valid)
                 st.write(f"Readable videos: {len(valid)}")
                 st.write(f"Unique videos: {len(unique)}")
-                st.write(f"Skipped unreadable videos: {len(skipped)}")
+                st.write(f"Skipped videos: {len(skipped)}")
+                for skipped_path in skipped:
+                    st.warning(
+                        f"Rejected {skipped_path.name}: "
+                        f"{skip_reasons[skipped_path]}"
+                    )
                 if not unique:
-                    raise ValueError("The ZIP contains no readable videos")
-                progress = st.progress(0.0)
-                segments = []
-                for index, path in enumerate(unique, start=1):
-                    segments.extend(index_video(path))
-                    progress.progress(index / len(unique))
-                from ml.storage import save_library
-
-                save_library(segments)
+                    raise ValueError(
+                        "No videos were accepted. Check the rejection reasons above."
+                    )
+                st.write(
+                    f"Indexing with {INDEX_WORKERS} parallel video workers..."
+                )
+                segments = index_videos_parallel(
+                    unique, workers=INDEX_WORKERS
+                )
                 st.session_state["indexed"] = True
                 status.update(label="Indexing complete", state="complete")
                 st.success(f"Indexed {len(unique)} videos into {len(segments)} segments.")

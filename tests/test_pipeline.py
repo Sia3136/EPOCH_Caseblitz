@@ -105,6 +105,15 @@ class PipelineTests(TestCase):
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0]["video_path"], "one.mp4")
 
+    def test_ranking_hides_results_below_default_confidence(self):
+        results = rank_results([
+            {"video_path": "weak.mp4", "similarity": 0.20},
+            {"video_path": "strong.mp4", "similarity": 0.30},
+        ])
+        self.assertEqual([result["video_path"] for result in results], [
+            "strong.mp4",
+        ])
+
     def test_script_search_uses_search_callback(self):
         calls = []
 
