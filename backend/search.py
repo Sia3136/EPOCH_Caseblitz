@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from .config import TOP_K
+from .db import get_conn
 from .ml import search as ml_search
 from .postprocess import postprocess, split_script
 from .schemas import (
@@ -244,6 +245,38 @@ def _to_postprocess_result(
     }
 
 
+def _normalize_result(result):
+    """Accept both legacy FAISS tuples and enriched ML result dictionaries."""
+    if isinstance(result, dict):
+        return result
+
+    if isinstance(result, (tuple, list)) and len(result) >= 2:
+        faiss_pos, similarity = result[0], result[1]
+        with get_conn() as connection:
+            row = connection.execute(
+                "SELECT s.clip_id, s.start_time, s.end_time, c.video_path "
+                "FROM segments s JOIN clips c ON c.clip_id = s.clip_id "
+                "WHERE s.faiss_pos=? AND c.status='ok' LIMIT 1",
+                (int(faiss_pos),),
+            ).fetchone()
+        if row:
+            return {
+                "clip_id": row["clip_id"],
+                "video_id": row["clip_id"],
+                "start_time": row["start_time"],
+                "end_time": row["end_time"],
+                "video_path": row["video_path"],
+                "similarity": float(similarity),
+            }
+
+    return {
+        "clip_id": "",
+        "start_time": 0.0,
+        "end_time": 0.0,
+        "similarity": 0.0,
+    }
+
+
 def _to_result(
     result: dict[str, Any],
 ):
@@ -345,7 +378,7 @@ def search_clips(
 
     prepared = [
         _to_postprocess_result(
-            result
+            _normalize_result(result)
         )
         for result in raw_results
     ]
@@ -414,7 +447,6 @@ def search_script(
 
     for index, sentence in enumerate(
         sentences,
-        start=1,
     ):
 
         response = search_clips(

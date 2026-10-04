@@ -1,1 +1,1 @@
-﻿"""Machine-learning components for the b-roll search pipeline."""
+"""CLIP and FAISS components for the EPOCH backend."""
